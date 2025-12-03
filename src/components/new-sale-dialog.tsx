@@ -35,14 +35,16 @@ import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { CreatableCombobox } from '@/components/creatable-combobox';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 const saleSchema = z.object({
   id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
   corretorId: z.string().min(1, 'Selecione um corretor.'),
-  clientId: z.string().min(1, 'Selecione um cliente.'),
-  developmentId: z.string().min(1, 'Selecione um empreendimento.'),
-  saleValue: z.number().min(0.01, 'O valor da venda deve ser maior que zero.'),
+  clientId: z.string().min(1, 'Selecione ou crie um cliente.'),
+  developmentId: z.string().min(1, 'Selecione ou crie um empreendimento.'),
+  saleValue: z.number().min(0, 'O valor da venda não pode ser negativo.'),
   atoValue: z.number().min(0, 'O valor do ato não pode ser negativo.'),
   commissionPercentage: z.preprocess(
     (a) => (a === null || a === undefined || a === '' ? null : parseFloat(String(a).replace(/[^0-9.]/g, ''))),
@@ -56,6 +58,7 @@ const saleSchema = z.object({
   observations: z.string().optional(),
   combinado: z.string().optional(),
   combinadoDate: z.date().optional().nullable(),
+  construtora: z.string().optional(),
 });
 
 
@@ -67,6 +70,11 @@ const formatCurrencyForInput = (value: number | undefined | string) => {
     if (isNaN(num)) return '';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
+
+const parseCurrency = (value: string): number => {
+    const num = parseFloat(value.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]+/g,""));
+    return isNaN(num) ? 0 : num;
+}
 
 const formatPercentageForInput = (value: number | undefined | null) => {
     if (value === undefined || value === null) return '';
@@ -86,6 +94,9 @@ type NewSaleDialogProps = {
 
 export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, developments }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const [clientsData, setClientsData] = useLocalStorage<Client[]>('clients', clients);
+  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>('developments', developments);
+
   const { toast } = useToast();
 
   const isOpen = controlledIsOpen ?? uncontrolledOpen;
@@ -108,6 +119,10 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
       commissionStatus: 'Pendente',
       observations: '',
       combinado: '',
+      saleValue: 0,
+      atoValue: 0,
+      commission: 0,
+      commissionPercentage: 5,
     },
   });
 
@@ -115,12 +130,12 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
   useEffect(() => {
     if (developmentId) {
-        const selectedDev = developments.find(d => d.id === developmentId);
+        const selectedDev = developmentsData.find(d => d.id === developmentId);
         if (selectedDev) {
             setValue('construtora', selectedDev.construtora, { shouldValidate: true });
         }
     }
-  }, [developmentId, developments, setValue])
+  }, [developmentId, developmentsData, setValue])
 
   useEffect(() => {
     if (isOpen) {
@@ -172,8 +187,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         observations: data.observations || '',
         combinado: data.combinado || '',
         combinadoDate: data.combinadoDate || null,
-        // This is a workaround because the select value is being set as construtora name instead of development id
-        construtora: developments.find(d => d.id === data.developmentId)?.construtora || '',
+        construtora: developmentsData.find(d => d.id === data.developmentId)?.construtora || '',
     };
     onSaleSubmit(finalData);
     toast({
@@ -182,6 +196,9 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     });
     onOpenChange(false);
   };
+  
+  const clientOptions = clientsData.map(c => ({ value: c.id, label: c.name }));
+  const developmentOptions = developmentsData.map(d => ({ value: d.id, label: d.name }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -267,16 +284,23 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 name="clientId"
                 control={control}
                 render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                           {clients.length > 0 ? clients.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            )) : <SelectItem value="none" disabled>Nenhum cliente cadastrado</SelectItem>}
-                        </SelectContent>
-                    </Select>
+                    <CreatableCombobox
+                        options={clientOptions}
+                        value={field.value}
+                        onValueChange={(newValue, isNew) => {
+                            if (isNew) {
+                                const newClient = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio' as const };
+                                setClientsData(prev => [...prev, newClient]);
+                                field.onChange(newClient.id);
+                            } else {
+                                field.onChange(newValue);
+                            }
+                        }}
+                        placeholder="Selecione ou crie um cliente"
+                        searchPlaceholder="Pesquisar cliente..."
+                        emptyPlaceholder="Nenhum cliente encontrado."
+                        createPlaceholder={(val) => `Criar "${val}"`}
+                    />
                 )}
               />
               {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
@@ -289,16 +313,23 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                     name="developmentId"
                     control={control}
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                            {developments.length > 0 ? developments.map((d) => (
-                                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                                )) : <SelectItem value="none" disabled>Nenhum empreendimento</SelectItem>}
-                            </SelectContent>
-                        </Select>
+                        <CreatableCombobox
+                            options={developmentOptions}
+                            value={field.value}
+                            onValueChange={(newValue, isNew) => {
+                                if (isNew) {
+                                    const newDev = { id: new Date().toISOString(), name: newValue, construtora: 'A definir', localizacao: 'A definir' };
+                                    setDevelopmentsData(prev => [...prev, newDev]);
+                                    field.onChange(newDev.id);
+                                } else {
+                                    field.onChange(newValue);
+                                }
+                            }}
+                            placeholder="Selecione ou crie um empreendimento"
+                            searchPlaceholder="Pesquisar empreendimento..."
+                            emptyPlaceholder="Nenhum empreendimento encontrado."
+                            createPlaceholder={(val) => `Criar "${val}"`}
+                        />
                     )}
                     />
                 {errors.developmentId && <p className="text-sm text-destructive">{errors.developmentId.message}</p>}
@@ -363,7 +394,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                   <Input
                     {...field}
                     placeholder="R$ 0,00"
-                    className="bg-muted/50 font-semibold"
+                    className="font-semibold"
                     onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9]/g, '');
                         field.onChange(Number(value) / 100);
