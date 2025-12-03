@@ -1,5 +1,5 @@
 'use client';
-import type { Sale } from '@/lib/types';
+import type { Sale, Corretor } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -25,9 +25,11 @@ type SalesTableProps = {
   sales: Sale[];
   onSaleSubmit: (sale: Sale) => void;
   onDeleteSale: (saleId: string) => void;
+  corretores: Corretor[];
+  corretoresMap: Record<string, Corretor>;
 };
 
-type SortKey = keyof Sale;
+type SortKey = keyof Sale | 'corretorName';
 
 const statusBadgeVariants = cva('capitalize font-semibold', {
   variants: {
@@ -42,12 +44,11 @@ const statusBadgeVariants = cva('capitalize font-semibold', {
   },
 });
 
-export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProps) {
+export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corretoresMap }: SalesTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('saleDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -65,17 +66,24 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProp
 
   const handleDialogClose = () => {
     setIsDialogOpen(false);
-    setEditingSale(null); // Clear editing state when dialog closes
+    setEditingSale(null);
   }
 
 
   const sortedSales = [...sales].sort((a, b) => {
-    const aValue = a[sortKey];
-    const bValue = b[sortKey];
+    let aValue, bValue;
+
+    if (sortKey === 'corretorName') {
+      aValue = corretoresMap[a.corretorId]?.name || '';
+      bValue = corretoresMap[b.corretorId]?.name || '';
+    } else {
+      aValue = a[sortKey as keyof Sale];
+      bValue = b[sortKey as keyof Sale];
+    }
     
     if (sortKey === 'saleDate') {
-        const aDate = new Date(aValue).getTime();
-        const bDate = new Date(bValue).getTime();
+        const aDate = new Date(aValue as string | number | Date).getTime();
+        const bDate = new Date(bValue as string | number | Date).getTime();
         if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
         if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
         return 0;
@@ -94,12 +102,12 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProp
     return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg border-2 border-dashed border-muted-foreground/20 py-20">
           <FileText className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-2xl font-semibold">Nenhuma venda registrada</h2>
+          <h2 className="text-2xl font-semibold">Nenhuma venda encontrada</h2>
           <p className="text-muted-foreground">
-            Clique em 'Nova Venda' para começar a adicionar.
+            Ajuste os filtros ou clique em 'Nova Venda' para adicionar uma.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog onSaleSubmit={onSaleSubmit} />
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores}/>
           </div>
         </div>
     );
@@ -118,12 +126,24 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProp
                   Data <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead>Corretor</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort('corretorName')}>
+                    Corretor <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Empreendimento</TableHead>
               <TableHead>Construtora</TableHead>
-              <TableHead className="text-right">Valor Venda</TableHead>
-              <TableHead className="text-right">Comissão</TableHead>
+              <TableHead className="text-right">
+                <Button variant="ghost" onClick={() => handleSort('saleValue')}>
+                    Valor Venda <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+                </TableHead>
+              <TableHead className="text-right">
+                 <Button variant="ghost" onClick={() => handleSort('commission')}>
+                    Comissão <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -134,7 +154,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProp
                 <TableCell>
                   {format(new Date(sale.saleDate), 'dd/MM/yyyy')}
                 </TableCell>
-                <TableCell>{sale.corretor}</TableCell>
+                <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>
                 <TableCell>{sale.clientName}</TableCell>
                 <TableCell>{sale.empreendimento}</TableCell>
                 <TableCell>{sale.construtora}</TableCell>
@@ -169,6 +189,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProp
             onOpenChange={handleDialogClose}
             sale={editingSale}
             onSaleSubmit={onSaleSubmit}
+            corretores={corretores}
         />
     )}
     </>

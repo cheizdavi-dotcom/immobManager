@@ -6,15 +6,16 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { Sale } from '@/lib/types';
+import type { Sale, Corretor } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type AttentionListProps = {
   sales: Sale[];
+  corretoresMap: Record<string, Corretor>;
 };
 
-export function AttentionList({ sales }: AttentionListProps) {
+export function AttentionList({ sales, corretoresMap }: AttentionListProps) {
   const sortedSales = [...sales].sort(
     (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
   );
@@ -46,7 +47,7 @@ export function AttentionList({ sales }: AttentionListProps) {
                     {sale.clientName}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {sale.empreendimento}
+                    {corretoresMap[sale.corretorId]?.name || 'N/A'} - {sale.empreendimento}
                   </p>
                 </div>
                 <div className="ml-auto font-medium text-sm">

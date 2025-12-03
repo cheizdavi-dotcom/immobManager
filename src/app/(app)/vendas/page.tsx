@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { sales } from '@/lib/data';
+import { useState, useMemo } from 'react';
+import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
 import { Input } from '@/components/ui/input';
@@ -12,24 +12,28 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getYear, getMonth } from 'date-fns';
-import type { Sale } from '@/lib/types';
+import type { Sale, Corretor } from '@/lib/types';
+import { KanbanBoard } from '@/components/kanban-board';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { List, LayoutGrid } from 'lucide-react';
+import { ALL_STATUSES } from '@/lib/types';
 
 export default function VendasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
-  const [salesData, setSalesData] = useState<Sale[]>(sales);
+  const [construtoraFilter, setConstrutoraFilter] = useState('all');
+  const [salesData, setSalesData] = useState<Sale[]>(initialSales);
+  const [corretoresData, setCorretoresData] = useState<Corretor[]>(initialCorretores);
 
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {
       const existingSaleIndex = prevSales.findIndex((s) => s.id === sale.id);
       if (existingSaleIndex > -1) {
-        // Update existing sale
         const updatedSales = [...prevSales];
         updatedSales[existingSaleIndex] = sale;
         return updatedSales;
       } else {
-        // Add new sale
         return [...prevSales, sale];
       }
     });
@@ -40,7 +44,7 @@ export default function VendasPage() {
   };
 
 
-  const filteredSales = salesData.filter((sale) => {
+  const filteredSales = useMemo(() => salesData.filter((sale) => {
     const saleDate = new Date(sale.saleDate);
     const saleMonth = getMonth(saleDate);
     const saleYear = getYear(saleDate);
@@ -48,62 +52,110 @@ export default function VendasPage() {
     const clientNameMatch = sale.clientName
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
+    
+    const construtoraMatch = construtoraFilter === 'all' || sale.construtora.toLowerCase() === construtoraFilter.toLowerCase();
 
     const monthMatch =
       monthFilter === 'all' || saleMonth === parseInt(monthFilter);
 
     const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
 
-    return clientNameMatch && monthMatch && yearMatch;
-  });
+    return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
+  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter]);
 
-  const uniqueYears = Array.from(
+  const uniqueYears = useMemo(() => Array.from(
     new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
-  ).sort((a,b) => b - a);
+  ).sort((a,b) => b - a), [salesData]);
+
+  const uniqueConstrutoras = useMemo(() => Array.from(
+    new Set(salesData.map((sale) => sale.construtora))
+  ).sort(), [salesData]);
+
+  const corretoresMap = useMemo(() => {
+    return corretoresData.reduce((acc, corretor) => {
+        acc[corretor.id] = corretor;
+        return acc;
+    }, {} as Record<string, Corretor>);
+  }, [corretoresData]);
 
   return (
     <main className="flex flex-1 flex-col">
-      <div className="flex flex-col gap-4 border-b p-4 md:p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Vendas Realizadas</h2>
-          <NewSaleDialog onSaleSubmit={addOrUpdateSale}/>
+       <Tabs defaultValue="tabela" className="flex flex-col flex-1">
+        <div className="flex flex-col gap-4 border-b p-4 md:p-6">
+            <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Vendas Realizadas</h2>
+             <div className="flex items-center gap-2">
+                <TabsList>
+                    <TabsTrigger value="tabela"><List className="h-4 w-4" /></TabsTrigger>
+                    <TabsTrigger value="kanban"><LayoutGrid className="h-4 w-4" /></TabsTrigger>
+                </TabsList>
+                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} />
+            </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+            <Input
+                placeholder="Pesquisar por Cliente..."
+                className="max-w-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">Todos os Meses</SelectItem>
+                {Array.from({ length: 12 }).map((_, i) => (
+                    <SelectItem key={i} value={String(i)}>
+                    {new Date(2000, i, 1).toLocaleString('pt-BR', { month: 'long' })}
+                    </SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger className="w-full sm:w-[120px]">
+                <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">Todos os Anos</SelectItem>
+                {uniqueYears.map((year) => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+             <Select value={construtoraFilter} onValueChange={setConstrutoraFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Construtora" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">Todas as Construtoras</SelectItem>
+                {uniqueConstrutoras.map((construtora) => (
+                    <SelectItem key={construtora} value={construtora}>{construtora}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+            </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            placeholder="Pesquisar por Cliente..."
-            className="max-w-xs"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Mês" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Meses</SelectItem>
-              {Array.from({ length: 12 }).map((_, i) => (
-                <SelectItem key={i} value={String(i)}>
-                  {new Date(2000, i, 1).toLocaleString('pt-BR', { month: 'long' })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={yearFilter} onValueChange={setYearFilter}>
-            <SelectTrigger className="w-full sm:w-[120px]">
-              <SelectValue placeholder="Ano" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Anos</SelectItem>
-              {uniqueYears.map((year) => (
-                 <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+             <TabsContent value="tabela">
+                <SalesTable 
+                    sales={filteredSales} 
+                    onSaleSubmit={addOrUpdateSale} 
+                    onDeleteSale={deleteSale}
+                    corretores={corretoresData}
+                    corretoresMap={corretoresMap}
+                />
+             </TabsContent>
+              <TabsContent value="kanban" className="flex-1">
+                 <KanbanBoard 
+                    sales={filteredSales} 
+                    statuses={ALL_STATUSES}
+                    onSaleSubmit={addOrUpdateSale}
+                    corretoresMap={corretoresMap}
+                 />
+            </TabsContent>
         </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        <SalesTable sales={filteredSales} onSaleSubmit={addOrUpdateSale} onDeleteSale={deleteSale} />
-      </div>
+       </Tabs>
     </main>
   );
 }

@@ -30,7 +30,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { cn } from '@/lib/utils';
-import { ALL_STATUSES, type Sale, type SaleStatus } from '@/lib/types';
+import { ALL_STATUSES, type Sale, type SaleStatus, type Corretor, CommissionStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 const saleSchema = z.object({
   id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
-  corretor: z.string().min(1, 'O nome do corretor é obrigatório.'),
+  corretorId: z.string().min(1, 'Selecione um corretor.'),
   clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
   empreendimento: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
   construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
@@ -53,6 +53,7 @@ const saleSchema = z.object({
   status: z.enum(ALL_STATUSES, {
     errorMap: () => ({ message: 'Selecione um status válido.' }),
   }),
+  commissionStatus: z.enum(['Pendente', 'Pago']).optional(),
 });
 
 type SaleFormValues = z.infer<typeof saleSchema>;
@@ -69,9 +70,10 @@ type NewSaleDialogProps = {
     sale?: Sale | null;
     isOpen?: boolean;
     onOpenChange?: (isOpen: boolean) => void;
+    corretores: Corretor[];
 }
 
-export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen }: NewSaleDialogProps) {
+export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const { toast } = useToast();
 
@@ -91,32 +93,35 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      corretor: '',
       clientName: '',
       empreendimento: '',
       construtora: '',
       status: 'Pendente',
+      commissionStatus: 'Pendente',
     },
   });
 
   useEffect(() => {
-    if (isEditing && sale) {
-      reset({
-        ...sale,
-        saleDate: new Date(sale.saleDate),
-      });
-    } else {
-      reset({
-        id: undefined,
-        corretor: '',
-        clientName: '',
-        empreendimento: '',
-        construtora: '',
-        status: 'Pendente',
-        saleValue: 0,
-        commission: 0,
-        saleDate: new Date()
-      });
+    if (isOpen) {
+        if (isEditing && sale) {
+        reset({
+            ...sale,
+            saleDate: new Date(sale.saleDate),
+        });
+        } else {
+        reset({
+            id: undefined,
+            corretorId: '',
+            clientName: '',
+            empreendimento: '',
+            construtora: '',
+            status: 'Pendente',
+            saleValue: 0,
+            commission: 0,
+            saleDate: new Date(),
+            commissionStatus: 'Pendente',
+        });
+        }
     }
   }, [sale, isEditing, reset, isOpen]);
 
@@ -136,6 +141,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     const finalData: Sale = {
         ...data,
         id: sale?.id || new Date().toISOString(),
+        commissionStatus: isEditing ? sale.commissionStatus : 'Pendente'
     };
     onSaleSubmit(finalData);
     toast({
@@ -202,9 +208,24 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
               {errors.saleDate && <p className="text-sm text-destructive">{errors.saleDate.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="corretor">Corretor</Label>
-              <Input id="corretor" {...register('corretor')} />
-              {errors.corretor && <p className="text-sm text-destructive">{errors.corretor.message}</p>}
+              <Label htmlFor="corretorId">Corretor</Label>
+              <Controller
+                name="corretorId"
+                control={control}
+                render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                           {corretores.length > 0 ? corretores.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            )) : <SelectItem value="none" disabled>Nenhum corretor cadastrado</SelectItem>}
+                        </SelectContent>
+                    </Select>
+                )}
+              />
+              {errors.corretorId && <p className="text-sm text-destructive">{errors.corretorId.message}</p>}
             </div>
           </div>
           
@@ -272,7 +293,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
         
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">Status da Venda</Label>
             <Controller
               name="status"
               control={control}

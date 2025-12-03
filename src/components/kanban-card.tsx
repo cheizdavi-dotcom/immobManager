@@ -1,4 +1,4 @@
-import type { Sale } from '@/lib/types';
+import type { Sale, Corretor } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -6,9 +6,10 @@ import { User, DollarSign } from 'lucide-react';
 
 type KanbanCardProps = {
   sale: Sale;
+  corretorName: string;
 };
 
-export function KanbanCard({ sale }: KanbanCardProps) {
+export function KanbanCard({ sale, corretorName }: KanbanCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="p-4">
@@ -20,7 +21,7 @@ export function KanbanCard({ sale }: KanbanCardProps) {
         </div>
         <p className="text-sm text-muted-foreground pt-1 flex items-center gap-1">
           <User className="w-3 h-3"/>
-          {sale.corretor}
+          {corretorName}
         </p>
       </CardHeader>
       <CardContent className="p-4 pt-0 text-sm space-y-2">
