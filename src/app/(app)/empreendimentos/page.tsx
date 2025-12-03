@@ -66,15 +66,15 @@ export default function EmpreendimentosPage() {
             <h1 className="text-2xl font-semibold">Gestão de Empreendimentos</h1>
             <p className="text-muted-foreground">Cadastre e gerencie os imóveis disponíveis.</p>
         </div>
-        <NewDevelopmentDialog
-          development={editingDevelopment}
-          onDevelopmentSubmit={addOrUpdateDevelopment}
-          isOpen={isDialogOpen}
-          onOpenChange={handleDialogClose}
-        >
-          <Button onClick={handleOpenNewDialog}>Novo Empreendimento</Button>
-        </NewDevelopmentDialog>
+        <Button onClick={handleOpenNewDialog}>Novo Empreendimento</Button>
       </div>
+      
+      <NewDevelopmentDialog
+        development={editingDevelopment}
+        onDevelopmentSubmit={addOrUpdateDevelopment}
+        isOpen={isDialogOpen}
+        onOpenChange={handleDialogClose}
+      />
 
       <Card>
         <CardContent className="p-0">

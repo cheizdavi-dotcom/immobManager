@@ -78,15 +78,15 @@ export default function ClientesPage() {
             <h1 className="text-2xl font-semibold">Gestão de Clientes</h1>
             <p className="text-muted-foreground">Cadastre e gerencie sua carteira de clientes.</p>
         </div>
-        <NewClientDialog
-          client={editingClient}
-          onClientSubmit={addOrUpdateClient}
-          isOpen={isDialogOpen}
-          onOpenChange={handleDialogClose}
-        >
-             <Button onClick={handleOpenNewDialog}>Novo Cliente</Button>
-        </NewClientDialog>
+        <Button onClick={handleOpenNewDialog}>Novo Cliente</Button>
       </div>
+
+      <NewClientDialog
+        client={editingClient}
+        onClientSubmit={addOrUpdateClient}
+        isOpen={isDialogOpen}
+        onOpenChange={handleDialogClose}
+      />
 
       <Card>
         <CardContent className='p-0'>

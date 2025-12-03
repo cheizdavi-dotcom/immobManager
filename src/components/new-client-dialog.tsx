@@ -40,7 +40,7 @@ type NewClientDialogProps = {
   client?: Client | null;
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export function NewClientDialog({
@@ -100,7 +100,7 @@ export function NewClientDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</DialogTitle>

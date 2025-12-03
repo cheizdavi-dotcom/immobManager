@@ -32,7 +32,7 @@ type NewDevelopmentDialogProps = {
   development?: Development | null;
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export function NewDevelopmentDialog({
@@ -89,7 +89,7 @@ export function NewDevelopmentDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Empreendimento' : 'Cadastrar Novo Empreendimento'}</DialogTitle>
