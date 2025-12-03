@@ -43,22 +43,13 @@ const saleSchema = z.object({
   clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
   empreendimento: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
   construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
-  saleValue: z.preprocess(
-    (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
-    z.number().min(0.01, 'O valor da venda deve ser maior que zero.')
-  ),
-   atoValue: z.preprocess(
-    (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
-    z.number().min(0, 'O valor do ato não pode ser negativo.')
-  ),
+  saleValue: z.number().min(0.01, 'O valor da venda deve ser maior que zero.'),
+  atoValue: z.number().min(0, 'O valor do ato não pode ser negativo.'),
   commissionPercentage: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.]/g, '')),
+    (a) => (a === null || a === undefined || a === '' ? null : parseFloat(String(a).replace(/[^0-9.]/g, ''))),
     z.number().min(0, 'A porcentagem não pode ser negativa.').optional().nullable()
   ),
-  commission: z.preprocess(
-    (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
-    z.number().min(0, 'A comissão não pode ser negativa.')
-  ),
+  commission: z.number().min(0, 'A comissão não pode ser negativa.'),
   status: z.enum(ALL_STATUSES, {
     errorMap: () => ({ message: 'Selecione um status válido.' }),
   }),
@@ -66,6 +57,7 @@ const saleSchema = z.object({
   observations: z.string().optional(),
   combinado: z.string().optional(),
 });
+
 
 type SaleFormValues = z.infer<typeof saleSchema>;
 
