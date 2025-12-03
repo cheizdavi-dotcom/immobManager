@@ -34,11 +34,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const menuItems = [
   {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-  },
-  {
     href: '/vendas',
     label: 'Vendas',
     icon: TrendingUp,
@@ -70,8 +65,10 @@ export function AppSidebar() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} asChild>
+              <Link href={item.href} passHref legacyBehavior>
                 <SidebarMenuButton
+                  as="a"
+                  href={item.href}
                   isActive={pathname === item.href}
                   tooltip={item.label}
                 >
