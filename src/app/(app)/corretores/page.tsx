@@ -1,5 +1,4 @@
 'use client';
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { PlusCircle, User, Users, DollarSign, TrendingUp, Phone, List } from 'lucide-react';
@@ -10,10 +9,12 @@ import { corretores as initialCorretores } from '@/lib/data';
 import type { Corretor, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
+import useLocalStorage from '@/hooks/useLocalStorage';
+import { useState } from 'react';
 
 export default function CorretoresPage() {
-  const [corretores, setCorretores] = useState<Corretor[]>(initialCorretores);
-  const [sales] = useState<Sale[]>(initialSales);
+  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+  const [sales] = useLocalStorage<Sale[]>('sales', initialSales);
   const [editingCorretor, setEditingCorretor] = useState<Corretor | null>(null);
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);

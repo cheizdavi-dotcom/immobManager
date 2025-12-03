@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
@@ -17,14 +17,15 @@ import { KanbanBoard } from '@/components/kanban-board';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 export default function VendasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
-  const [salesData, setSalesData] = useState<Sale[]>(initialSales);
-  const [corretoresData, setCorretoresData] = useState<Corretor[]>(initialCorretores);
+  const [salesData, setSalesData] = useLocalStorage<Sale[]>('sales', initialSales);
+  const [corretoresData, setCorretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
 
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {

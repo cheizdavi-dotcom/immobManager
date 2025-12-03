@@ -1,6 +1,6 @@
 'use client';
-import { sales } from '@/lib/data';
-import type { Sale } from '@/lib/types';
+import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
+import type { Sale, Corretor } from '@/lib/types';
 import { isThisMonth } from 'date-fns';
 import { KpiCard } from '@/components/kpi-card';
 import { SalesChart } from '@/components/sales-chart';
@@ -14,11 +14,12 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
-import { useState } from 'react';
-
+import { useState, useMemo } from 'react';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 export default function DashboardPage() {
-  const [salesData, setSalesData] = useState<Sale[]>(sales);
+  const [salesData, setSalesData] = useLocalStorage<Sale[]>('sales', initialSales);
+  const [corretoresData, setCorretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
   
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {
@@ -60,6 +61,13 @@ export default function DashboardPage() {
 
   const attentionSales = salesData.filter((sale) => sale.status === 'Pendente');
 
+  const corretoresMap = useMemo(() => {
+    return corretoresData.reduce((acc, corretor) => {
+        acc[corretor.id] = corretor;
+        return acc;
+    }, {} as Record<string, Corretor>);
+  }, [corretoresData]);
+
   if (salesData.length === 0) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
@@ -71,12 +79,26 @@ export default function DashboardPage() {
             seus resultados.
           </p>
           <div className="mt-4">
-            <NewSaleDialog onSaleSubmit={addOrUpdateSale}/>
+            <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} />
           </div>
         </div>
       </main>
     );
   }
+
+    const chartData = useMemo(() => {
+     const salesByBuilder = completedSales.reduce((acc, sale) => {
+      const builder = sale.construtora;
+      if (!acc[builder]) {
+        acc[builder] = 0;
+      }
+      acc[builder] += sale.saleValue;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(salesByBuilder).map(([name, sales]) => ({ name, sales }));
+  }, [completedSales]);
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -104,11 +126,10 @@ export default function DashboardPage() {
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          {/* Chart needs builder data which is not in the new Sale model */}
-          {/* <SalesChart data={chartData} /> */}
+          <SalesChart data={chartData} />
         </div>
         <div>
-          <AttentionList sales={attentionSales} />
+          <AttentionList sales={attentionSales} corretoresMap={corretoresMap} />
         </div>
       </div>
     </main>
