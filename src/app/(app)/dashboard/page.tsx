@@ -26,7 +26,7 @@ export default function DashboardPage() {
         conversionRate,
         atosMesAtual,
     } = useMemo(() => {
-        const completedSales = sales.filter(s => s.status === 'Pago');
+        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
         const vgvTotal = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
@@ -35,10 +35,10 @@ export default function DashboardPage() {
             .reduce((acc, s) => acc + (s.commission || 0), 0);
 
         const comissoesPendentes = sales
-            .filter(s => s.status === 'Pago' && s.commissionStatus === 'Pendente')
+            .filter(s => s.status === 'Venda Concluída / Paga' && s.commissionStatus === 'Pendente')
             .reduce((acc_1, s_1) => acc_1 + (s_1.commission || 0), 0);
         
-        const totalClosedDeals = sales.filter(s => s.status === 'Pago' || s.status === 'Caiu').length;
+        const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
 
         const today = new Date();
@@ -57,7 +57,7 @@ export default function DashboardPage() {
     const brokerRankingData = useMemo(() => {
         if (sales.length === 0 || corretores.length === 0) return [];
         const salesByBroker = sales
-            .filter(s => s.status === 'Pago')
+            .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
                 if (!acc[sale.corretorId]) {
                     acc[sale.corretorId] = 0;
@@ -84,7 +84,7 @@ export default function DashboardPage() {
         if (sales.length === 0) return [];
 
         const salesByBuilder = sales
-            .filter(s => s.status === 'Pago')
+            .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
                 const builder = sale.construtora;
                 if (!acc[builder]) {
@@ -100,8 +100,8 @@ export default function DashboardPage() {
     const attentionSales = useMemo(() => {
         const sevenDaysAgo = subDays(new Date(), 7);
         return sales.filter(sale => 
-            (sale.status === 'Pendente') &&
-            isAfter(sevenDaysAgo, new Date(sale.saleDate))
+            (sale.status === 'Análise de Crédito / SPC' || sale.status === 'Aguardando Assinatura' || sale.status === 'Aguardando Pagamento Ato') &&
+            isAfter(new Date(sale.saleDate), sevenDaysAgo)
         );
     }, [sales]);
 

@@ -17,6 +17,7 @@ export const ALL_STATUSES: SaleStatus[] = [
   'Venda Concluída / Paga',
   'Venda Cancelada / Caiu',
 ];
+
 export const ALL_CLIENT_STATUSES: ClientStatus[] = ['Frio', 'Morno', 'Quente'];
 
 export type Corretor = {

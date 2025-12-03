@@ -23,7 +23,7 @@ type SalesHistoryDialogProps = {
     sales: Sale[];
 }
 
-const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-nowrap', {
+const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-nowrap border', {
   variants: {
     status: {
       'Proposta / Cadastro': 'bg-gray-100 text-gray-800 border-gray-200',

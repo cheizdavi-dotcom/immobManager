@@ -26,13 +26,13 @@ const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-point
 const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
   variants: {
     status: {
-      Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      Pago: 'bg-green-100 text-green-800 border-green-200',
-      Caiu: 'bg-red-100 text-red-800 border-red-200',
+      'Proposta / Cadastro': 'bg-gray-100 text-gray-800 border-gray-200',
+      'Análise de Crédito / SPC': 'bg-orange-100 text-orange-800 border-orange-200',
+      'Aguardando Assinatura': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Aguardando Pagamento Ato': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Venda Concluída / Paga': 'bg-green-100 text-green-800 border-green-200',
+      'Venda Cancelada / Caiu': 'bg-red-100 text-red-800 border-red-200',
     },
-  },
-  defaultVariants: {
-    status: 'Pendente',
   },
 });
 
@@ -44,7 +44,7 @@ export default function FinanceiroPage() {
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {
-        const completedSales = sales.filter(s => s.status === 'Pago');
+        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
         const faturamentoTotal = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
@@ -53,7 +53,7 @@ export default function FinanceiroPage() {
             .reduce((acc, s) => acc + (s.commission || 0), 0);
 
         const comissoesPendentes = sales
-            .filter(s => s.status === 'Pago' && s.commissionStatus === 'Pendente')
+            .filter(s => s.status === 'Venda Concluída / Paga' && s.commissionStatus === 'Pendente')
             .reduce((acc, s) => acc + (s.commission || 0), 0);
         
         const lucroBruto = faturamentoTotal - comissoesPagas - comissoesPendentes;
@@ -78,7 +78,7 @@ export default function FinanceiroPage() {
 
     const toggleCommissionStatus = (saleId: string, currentStatus: CommissionStatus) => {
         const sale = sales.find(s => s.id === saleId);
-        if (sale?.status === 'Caiu') {
+        if (sale?.status === 'Venda Cancelada / Caiu') {
              toast({
                 variant: "destructive",
                 title: "Ação Bloqueada",
@@ -166,13 +166,13 @@ export default function FinanceiroPage() {
                     {commissionsToDisplay.map(sale => (
                         <TableRow 
                             key={sale.id}
-                            className={cn('border-x-0', sale.status === 'Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
+                            className={cn('border-x-0', sale.status === 'Venda Cancelada / Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
                         >
                             <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{getCorretorName(sale.corretorId)}</TableCell>
                             <TableCell>
                                 <div className="font-medium">{developments.find(d => d.id === sale.developmentId)?.name || 'N/A'}</div>
-                                <div className={cn("text-sm", sale.status !== 'Caiu' ? "text-muted-foreground" : "text-inherit")}>{getClientName(sale.clientId)}</div>
+                                <div className={cn("text-sm", sale.status !== 'Venda Cancelada / Caiu' ? "text-muted-foreground" : "text-inherit")}>{getClientName(sale.clientId)}</div>
                             </TableCell>
                             <TableCell>
                                 <Badge className={saleStatusBadgeVariants({status: sale.status})}>{sale.status}</Badge>

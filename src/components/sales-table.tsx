@@ -38,7 +38,7 @@ type SalesTableProps = {
 
 type SortKey = keyof Sale | 'corretorName' | 'clientName';
 
-const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-nowrap', {
+const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-nowrap border', {
   variants: {
     status: {
       'Proposta / Cadastro': 'bg-gray-100 text-gray-800 border-gray-200',
@@ -221,7 +221,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                         {formatCurrency(sale.commission)}
                         </TableCell>
                         <TableCell>
-                        <Badge variant="outline" className={statusBadgeVariants({ status: sale.status })}>
+                        <Badge className={statusBadgeVariants({ status: sale.status })}>
                             {sale.status}
                         </Badge>
                         </TableCell>
