@@ -29,7 +29,7 @@ import { CalendarIcon, PlusCircle, Percent } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency, parseCurrency } from '@/lib/utils';
 import { ALL_STATUSES, type Sale, type Corretor, type Client, type Development } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
@@ -65,9 +65,9 @@ type SaleFormValues = z.infer<typeof saleSchema>;
 
 const formatCurrencyForInput = (value: number | undefined | string) => {
     if (value === undefined || value === null || value === '') return '';
-    const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9,]/g, '').replace(',', '.')) : value;
+    const num = typeof value === 'string' ? parseCurrency(value) : value;
     if (isNaN(num)) return '';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+    return formatCurrency(num);
 };
 
 const formatPercentageForInput = (value: number | undefined | null) => {
@@ -182,9 +182,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         observations: data.observations || '',
         combinado: data.combinado || '',
         combinadoDate: data.combinadoDate || null,
-        // The rest of the data is already in the correct shape
-        clientName: '',
-        empreendimento: '',
+        clientName: clients.find(c => c.id === data.clientId)?.name || '',
+        empreendimento: developments.find(d => d.id === data.developmentId)?.name || '',
     };
     onSaleSubmit(finalData);
     toast({
@@ -336,15 +335,15 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="saleValue"
                     control={control}
-                    render={({ field }) => (
+                    render={({ field: { onChange, value, ...rest} }) => (
                     <Input
-                        {...field}
+                        {...rest}
                         placeholder="R$ 0,00"
+                        value={formatCurrency(value)}
                         onChange={(e) => {
-                            const value = e.target.value.replace(/[^0-9]/g, '');
-                            field.onChange(Number(value) / 100);
+                            const parsedValue = parseCurrency(e.target.value);
+                            onChange(parsedValue);
                         }}
-                        value={formatCurrencyForInput(field.value)}
                     />
                     )}
                 />
@@ -355,15 +354,15 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="atoValue"
                     control={control}
-                    render={({ field }) => (
+                    render={({ field: { onChange, value, ...rest} }) => (
                     <Input
-                        {...field}
+                        {...rest}
                         placeholder="R$ 0,00"
-                         onChange={(e) => {
-                            const value = e.target.value.replace(/[^0-9]/g, '');
-                            field.onChange(Number(value) / 100);
+                        value={formatCurrency(value)}
+                        onChange={(e) => {
+                            const parsedValue = parseCurrency(e.target.value);
+                            onChange(parsedValue);
                         }}
-                        value={formatCurrencyForInput(field.value)}
                     />
                     )}
                 />
@@ -378,16 +377,16 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
               <Controller
                 name="commission"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { onChange, value, ...rest} }) => (
                   <Input
-                    {...field}
+                    {...rest}
                     placeholder="R$ 0,00"
                     className="font-semibold"
+                    value={formatCurrency(value)}
                     onChange={(e) => {
-                        const value = e.target.value.replace(/[^0-9]/g, '');
-                        field.onChange(Number(value) / 100);
+                        const parsedValue = parseCurrency(e.target.value);
+                        onChange(parsedValue);
                     }}
-                    value={formatCurrencyForInput(field.value)}
                   />
                 )}
               />

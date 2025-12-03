@@ -66,7 +66,7 @@ export default function VendasPage() {
     const saleMonth = getMonth(saleDate);
     const saleYear = getYear(saleDate);
 
-    const clientName = clientsMap[sale.clientId]?.name || 'Cliente desconhecido';
+    const clientName = clientsMap[sale.clientId]?.name || '';
     const clientNameMatch = clientName
       .toLowerCase()
       .includes(searchTerm.toLowerCase());

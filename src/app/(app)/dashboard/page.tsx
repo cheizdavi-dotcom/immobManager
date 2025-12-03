@@ -28,15 +28,15 @@ export default function DashboardPage() {
     } = useMemo(() => {
         const completedSales = sales.filter(s => s.status === 'Pago');
         
-        const vgvTotal = completedSales.reduce((acc, s) => acc + s.saleValue, 0);
+        const vgvTotal = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
         const comissoesPagas = completedSales
             .filter(s => s.commissionStatus === 'Pago')
-            .reduce((acc, s) => acc + s.commission, 0);
+            .reduce((acc, s) => acc + (s.commission || 0), 0);
 
-        const comissoesPendentes = completedSales
-            .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc_1, s_1) => acc_1 + s_1.commission, 0);
+        const comissoesPendentes = sales
+            .filter(s => s.status === 'Pago' && s.commissionStatus === 'Pendente')
+            .reduce((acc_1, s_1) => acc_1 + (s_1.commission || 0), 0);
         
         const totalClosedDeals = sales.filter(s => s.status === 'Pago' || s.status === 'Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
@@ -46,9 +46,10 @@ export default function DashboardPage() {
         const end = endOfMonth(today);
 
         const atosMesAtual = sales.filter(s => {
+            if (!s.saleDate) return false;
             const saleDate = new Date(s.saleDate);
             return isWithinInterval(saleDate, { start, end });
-        }).reduce((acc, s) => acc + s.atoValue, 0);
+        }).reduce((acc, s) => acc + (s.atoValue || 0), 0);
 
         return { vgvTotal, comissoesPagas, comissoesPendentes, conversionRate, atosMesAtual };
     }, [sales]);
@@ -61,7 +62,7 @@ export default function DashboardPage() {
                 if (!acc[sale.corretorId]) {
                     acc[sale.corretorId] = 0;
                 }
-                acc[sale.corretorId] += sale.saleValue;
+                acc[sale.corretorId] += (sale.saleValue || 0);
                 return acc;
         }, {} as Record<string, number>);
 
@@ -89,7 +90,7 @@ export default function DashboardPage() {
                 if (!acc[builder]) {
                     acc[builder] = { name: builder, value: 0 };
                 }
-                acc[builder].value += sale.saleValue;
+                acc[builder].value += (sale.saleValue || 0);
                 return acc;
         }, {} as Record<string, {name: string, value: number}>);
 

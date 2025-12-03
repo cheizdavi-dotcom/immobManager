@@ -32,9 +32,9 @@ export type Sale = {
   saleDate: Date;
   corretorId: string;
   clientId: string; 
-  clientName: string; // This is deprecated
+  clientName: string;
   developmentId: string; 
-  empreendimento: string; // This is deprecated
+  empreendimento: string;
   construtora: string;
   saleValue: number;
   atoValue: number;

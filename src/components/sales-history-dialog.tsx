@@ -8,11 +8,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Sale, Corretor, Client } from '@/lib/types';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
+import { useMemo } from 'react';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 type SalesHistoryDialogProps = {
     isOpen: boolean;
@@ -35,6 +37,23 @@ const statusBadgeVariants = cva('capitalize font-semibold', {
 });
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
+    const [clientsData] = useLocalStorage<Client[]>('clients', []);
+    const [developmentsData] = useLocalStorage<Development[]>('developments', []);
+
+    const clientsMap = useMemo(() => {
+        return clientsData.reduce((acc, client) => {
+            acc[client.id] = client;
+            return acc;
+        }, {} as Record<string, Client>);
+    }, [clientsData]);
+
+    const developmentsMap = useMemo(() => {
+        return developmentsData.reduce((acc, dev) => {
+            acc[dev.id] = dev;
+            return acc;
+        }, {} as Record<string, Development>);
+    }, [developmentsData]);
+
   if (!corretor) return null;
 
   const sortedSales = [...sales].sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
@@ -64,8 +83,8 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
                         {sortedSales.map(sale => (
                             <TableRow key={sale.id}>
                                 <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
-                                <TableCell>{sale.clientName}</TableCell>
-                                <TableCell>{sale.empreendimento}</TableCell>
+                                <TableCell>{clientsMap[sale.clientId]?.name || 'N/A'}</TableCell>
+                                <TableCell>{developmentsMap[sale.developmentId]?.name || 'N/A'}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(sale.saleValue)}</TableCell>
                                 <TableCell>
                                     <Badge className={statusBadgeVariants({status: sale.status})}>{sale.status}</Badge>

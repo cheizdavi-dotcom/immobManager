@@ -46,15 +46,15 @@ export default function FinanceiroPage() {
     const financialMetrics = useMemo(() => {
         const completedSales = sales.filter(s => s.status === 'Pago');
         
-        const faturamentoTotal = completedSales.reduce((acc, s) => acc + s.saleValue, 0);
+        const faturamentoTotal = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
         const comissoesPagas = completedSales
             .filter(s => s.commissionStatus === 'Pago')
-            .reduce((acc, s) => acc + s.commission, 0);
+            .reduce((acc, s) => acc + (s.commission || 0), 0);
 
-        const comissoesPendentes = completedSales
-            .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc, s) => acc + s.commission, 0);
+        const comissoesPendentes = sales
+            .filter(s => s.status === 'Pago' && s.commissionStatus === 'Pendente')
+            .reduce((acc, s) => acc + (s.commission || 0), 0);
         
         const lucroBruto = faturamentoTotal - comissoesPagas - comissoesPendentes;
         
@@ -71,6 +71,9 @@ export default function FinanceiroPage() {
 
     const getCorretorName = (corretorId: string) => {
         return corretores.find(c => c.id === corretorId)?.name || 'N/A';
+    }
+    const getClientName = (clientId: string) => {
+        return clients.find(c => c.id === clientId)?.name || 'N/A';
     }
 
     const toggleCommissionStatus = (saleId: string, currentStatus: CommissionStatus) => {
@@ -168,8 +171,8 @@ export default function FinanceiroPage() {
                             <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{getCorretorName(sale.corretorId)}</TableCell>
                             <TableCell>
-                                <div className="font-medium">{sale.empreendimento}</div>
-                                <div className={cn("text-sm", sale.status !== 'Caiu' ? "text-muted-foreground" : "text-inherit")}>{sale.clientName}</div>
+                                <div className="font-medium">{developments.find(d => d.id === sale.developmentId)?.name || 'N/A'}</div>
+                                <div className={cn("text-sm", sale.status !== 'Caiu' ? "text-muted-foreground" : "text-inherit")}>{getClientName(sale.clientId)}</div>
                             </TableCell>
                             <TableCell>
                                 <Badge className={saleStatusBadgeVariants({status: sale.status})}>{sale.status}</Badge>
