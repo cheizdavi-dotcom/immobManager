@@ -71,13 +71,14 @@ export function AppSidebar() {
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
-                as={Link}
-                href={item.href}
+                asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <item.icon />
-                <span>{item.label}</span>
+                <Link href={item.href}>
+                  <item.icon />
+                  <span>{item.label}</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -116,5 +117,3 @@ export function AppSidebar() {
     </>
   );
 }
-
-    
