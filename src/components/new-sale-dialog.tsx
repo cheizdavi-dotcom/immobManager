@@ -35,13 +35,14 @@ import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { CreatableSelect } from './creatable-select';
 
 const saleSchema = z.object({
   id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
   corretorId: z.string().min(1, 'Selecione um corretor.'),
-  clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
-  empreendimento: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
+  clientId: z.string().min(1, 'O nome do cliente é obrigatório.'),
+  developmentId: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
   construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
   saleValue: z.number().min(0, 'O valor da venda não pode ser negativo.'),
   atoValue: z.number().min(0, 'O valor do ato não pode ser negativo.'),
@@ -82,10 +83,12 @@ type NewSaleDialogProps = {
     onOpenChange?: (isOpen: boolean) => void;
     corretores: Corretor[];
     clients: Client[];
+    setClients: (clients: Client[] | ((c: Client[]) => Client[])) => void;
     developments: Development[];
+    setDevelopments: (developments: Development[] | ((d: Development[]) => Development[])) => void;
 }
 
-export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, developments }: NewSaleDialogProps) {
+export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, setClients, developments, setDevelopments }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   
   const { toast } = useToast();
@@ -114,8 +117,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
       atoValue: 0,
       commission: 0,
       commissionPercentage: 5,
-      clientName: '',
-      empreendimento: '',
+      clientId: '',
+      developmentId: '',
       construtora: '',
     },
   });
@@ -132,8 +135,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         reset({
             id: undefined,
             corretorId: '',
-            clientName: '',
-            empreendimento: '',
+            clientId: '',
+            developmentId: '',
             construtora: '',
             status: 'Pendente',
             saleValue: 0,
@@ -162,17 +165,26 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     }
   }, [saleValue, commissionPercentage, setValue, dirtyFields.commission]);
 
+  const developmentId = watch('developmentId');
+  useEffect(() => {
+      const selectedDevelopment = developments.find(d => d.id === developmentId);
+      if (selectedDevelopment) {
+          setValue('construtora', selectedDevelopment.construtora, { shouldValidate: true });
+      }
+  }, [developmentId, developments, setValue]);
+
 
   const onSubmit = (data: SaleFormValues) => {
     const finalData: Sale = {
         ...data,
         id: sale?.id || new Date().toISOString(),
-        clientId: data.clientName, // Using name as ID for simplicity now
-        developmentId: data.empreendimento, // Using name as ID for simplicity now
         commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
         observations: data.observations || '',
         combinado: data.combinado || '',
         combinadoDate: data.combinadoDate || null,
+        // The rest of the data is already in the correct shape
+        clientName: '',
+        empreendimento: '',
     };
     onSaleSubmit(finalData);
     toast({
@@ -261,16 +273,54 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
           
           <div className="space-y-2">
-              <Label htmlFor="clientName">Cliente</Label>
-               <Input id="clientName" {...register('clientName')} placeholder="Digite o nome do cliente" />
-              {errors.clientName && <p className="text-sm text-destructive">{errors.clientName.message}</p>}
+              <Label htmlFor="clientId">Cliente</Label>
+              <Controller
+                name="clientId"
+                control={control}
+                render={({ field }) => (
+                    <CreatableSelect
+                        placeholder="Selecione ou digite um novo cliente"
+                        options={clients.map(c => ({ value: c.id, label: c.name }))}
+                        value={field.value}
+                        onChange={(newValue, isNew) => {
+                            if (isNew && newValue) {
+                                const newClient: Client = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio' };
+                                setClients(prev => [...prev, newClient]);
+                                field.onChange(newClient.id);
+                            } else {
+                                field.onChange(newValue);
+                            }
+                        }}
+                    />
+                )}
+                />
+              {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
           </div>
 
            <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="empreendimento">Empreendimento</Label>
-                 <Input id="empreendimento" {...register('empreendimento')} placeholder="Digite o nome do empreendimento" />
-                {errors.empreendimento && <p className="text-sm text-destructive">{errors.empreendimento.message}</p>}
+                <Label htmlFor="developmentId">Empreendimento</Label>
+                <Controller
+                    name="developmentId"
+                    control={control}
+                    render={({ field }) => (
+                        <CreatableSelect
+                            placeholder="Selecione ou digite um novo empreendimento"
+                            options={developments.map(d => ({ value: d.id, label: d.name }))}
+                            value={field.value}
+                            onChange={(newValue, isNew) => {
+                                if (isNew && newValue) {
+                                    const newDev: Development = { id: new Date().toISOString(), name: newValue, construtora: '', localizacao: '' };
+                                    setDevelopments(prev => [...prev, newDev]);
+                                    field.onChange(newDev.id);
+                                } else {
+                                    field.onChange(newValue);
+                                }
+                            }}
+                        />
+                    )}
+                />
+                {errors.developmentId && <p className="text-sm text-destructive">{errors.developmentId.message}</p>}
             </div>
 
             <div className="space-y-2">

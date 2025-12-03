@@ -28,7 +28,9 @@ type SalesTableProps = {
   onDeleteSale: (saleId: string) => void;
   corretores: Corretor[];
   clients: Client[];
+  setClients: (clients: Client[] | ((c: Client[]) => Client[])) => void;
   developments: Development[];
+  setDevelopments: (developments: Development[] | ((d: Development[]) => Development[])) => void;
   corretoresMap: Record<string, Corretor>;
   clientsMap: Record<string, Client>;
   developmentsMap: Record<string, Development>;
@@ -49,7 +51,7 @@ const statusBadgeVariants = cva('capitalize font-semibold', {
   },
 });
 
-export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clients, developments, corretoresMap, clientsMap, developmentsMap }: SalesTableProps) {
+export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clients, setClients, developments, setDevelopments, corretoresMap, clientsMap, developmentsMap }: SalesTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('saleDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -92,8 +94,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
       aValue = corretoresMap[a.corretorId]?.name || '';
       bValue = corretoresMap[b.corretorId]?.name || '';
     } else if (sortKey === 'clientName') {
-      aValue = a.clientName || '';
-      bValue = b.clientName || '';
+      aValue = clientsMap[a.clientId]?.name || '';
+      bValue = clientsMap[b.clientId]?.name || '';
     } else {
       aValue = a[sortKey as keyof Sale];
       bValue = b[sortKey as keyof Sale];
@@ -131,7 +133,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
             Ajuste os filtros ou clique em 'Nova Venda' para adicionar uma.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} developments={developments} />
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} setClients={setClients} developments={developments} setDevelopments={setDevelopments} />
           </div>
         </div>
     );
@@ -201,12 +203,12 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                         <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>
                         <TableCell>
                             <div className={cn("flex items-center gap-2", hasUrgentObservation(sale.observations) && 'font-bold text-yellow-700')}>
-                                {sale.clientName || 'N/A'}
+                                {clientsMap[sale.clientId]?.name || 'N/A'}
                                 {sale.observations && <MessageSquare className="h-4 w-4 text-blue-500" />}
                                 {sale.combinado && <Handshake className="h-4 w-4 text-green-600" />}
                             </div>
                         </TableCell>
-                        <TableCell>{sale.empreendimento || 'N/A'}</TableCell>
+                        <TableCell>{developmentsMap[sale.developmentId]?.name || 'N/A'}</TableCell>
                         <TableCell>{sale.construtora || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                         {formatCurrency(sale.saleValue)}
@@ -279,7 +281,9 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                 onSaleSubmit={onSaleSubmit}
                 corretores={corretores}
                 clients={clients}
+                setClients={setClients}
                 developments={developments}
+                setDevelopments={setDevelopments}
             />
         )}
     </>

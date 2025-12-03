@@ -1,4 +1,4 @@
-import type { Sale } from '@/lib/types';
+import type { Sale, Client, Development } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -18,7 +18,7 @@ export function KanbanCard({ sale, corretorName, clientName, developmentName }: 
         <div className="flex justify-between items-start">
             <CardTitle className="text-base font-semibold leading-tight">{clientName}</CardTitle>
              <Badge variant="secondary">
-                {sale.empreendimento}
+                {developmentName}
             </Badge>
         </div>
         <p className="text-sm text-muted-foreground pt-1 flex items-center gap-1">

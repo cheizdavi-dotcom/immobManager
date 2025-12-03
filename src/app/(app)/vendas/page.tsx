@@ -26,8 +26,8 @@ export default function VendasPage() {
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
   const [salesData, setSalesData] = useLocalStorage<Sale[]>('sales', initialSales);
   const [corretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
-  const [clientsData] = useLocalStorage<Client[]>('clients', initialClients);
-  const [developmentsData] = useLocalStorage<Development[]>('developments', initialDevelopments);
+  const [clientsData, setClientsData] = useLocalStorage<Client[]>('clients', initialClients);
+  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>('developments', initialDevelopments);
 
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {
@@ -66,7 +66,8 @@ export default function VendasPage() {
     const saleMonth = getMonth(saleDate);
     const saleYear = getYear(saleDate);
 
-    const clientNameMatch = sale.clientName
+    const clientName = clientsMap[sale.clientId]?.name || 'Cliente desconhecido';
+    const clientNameMatch = clientName
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     
@@ -78,7 +79,7 @@ export default function VendasPage() {
     const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
 
     return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
-  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter]);
+  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap]);
 
   const uniqueYears = useMemo(() => Array.from(
     new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
@@ -106,7 +107,7 @@ export default function VendasPage() {
                     <TabsTrigger value="tabela"><List className="h-4 w-4" /></TabsTrigger>
                     <TabsTrigger value="kanban"><LayoutGrid className="h-4 w-4" /></TabsTrigger>
                 </TabsList>
-                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} clients={clientsData} developments={developmentsData} />
+                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} clients={clientsData} setClients={setClientsData} developments={developmentsData} setDevelopments={setDevelopmentsData} />
             </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -164,7 +165,9 @@ export default function VendasPage() {
                     clientsMap={clientsMap}
                     developmentsMap={developmentsMap}
                     clients={clientsData}
+                    setClients={setClientsData}
                     developments={developmentsData}
+                    setDevelopments={setDevelopmentsData}
                 />
              </TabsContent>
               <TabsContent value="kanban" className="flex-1">
@@ -178,6 +181,8 @@ export default function VendasPage() {
                     corretores={corretoresData}
                     clients={clientsData}
                     developments={developmentsData}
+                    setClients={setClientsData}
+                    setDevelopments={setDevelopmentsData}
                  />
             </TabsContent>
         </div>

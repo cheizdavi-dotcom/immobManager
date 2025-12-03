@@ -31,14 +31,14 @@ export type Sale = {
   id: string;
   saleDate: Date;
   corretorId: string;
-  clientId: string; // This is not an ID anymore, it's the client name
-  clientName: string;
-  developmentId: string; // This is not an ID anymore, it's the development name
-  empreendimento: string;
+  clientId: string; 
+  clientName: string; // This is deprecated
+  developmentId: string; 
+  empreendimento: string; // This is deprecated
   construtora: string;
   saleValue: number;
   atoValue: number;
-  commissionPercentage: number;
+  commissionPercentage: number | null;
   commission: number;
   status: SaleStatus;
   commissionStatus: CommissionStatus;
