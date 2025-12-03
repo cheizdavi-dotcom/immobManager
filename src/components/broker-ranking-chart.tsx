@@ -80,6 +80,12 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30 }} barCategoryGap="20%">
+              <defs>
+                <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.9} />
+                  <stop offset="90%" stopColor="hsl(var(--chart-1))" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
               <CartesianGrid horizontal={false} strokeDasharray="3 3" />
               <YAxis
                 dataKey="name"
@@ -105,7 +111,13 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
                 cursor={{ fill: "hsl(var(--muted))" }}
                 content={<CustomTooltip />}
               />
-              <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} isAnimationActive={true}/>
+              <Bar 
+                dataKey="total" 
+                fill="url(#colorVendas)" 
+                radius={[0, 10, 10, 0]} 
+                isAnimationActive={true}
+                background={{ fill: 'hsl(var(--muted))', radius: 10 }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
