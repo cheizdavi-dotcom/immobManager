@@ -1,5 +1,5 @@
 'use client';
-import type { Sale, Corretor } from '@/lib/types';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -27,10 +27,14 @@ type SalesTableProps = {
   onSaleSubmit: (sale: Sale) => void;
   onDeleteSale: (saleId: string) => void;
   corretores: Corretor[];
+  clients: Client[];
+  developments: Development[];
   corretoresMap: Record<string, Corretor>;
+  clientsMap: Record<string, Client>;
+  developmentsMap: Record<string, Development>;
 };
 
-type SortKey = keyof Sale | 'corretorName';
+type SortKey = keyof Sale | 'corretorName' | 'clientName';
 
 const statusBadgeVariants = cva('capitalize font-semibold', {
   variants: {
@@ -45,7 +49,7 @@ const statusBadgeVariants = cva('capitalize font-semibold', {
   },
 });
 
-export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corretoresMap }: SalesTableProps) {
+export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clients, developments, corretoresMap, clientsMap, developmentsMap }: SalesTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('saleDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -87,6 +91,9 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
     if (sortKey === 'corretorName') {
       aValue = corretoresMap[a.corretorId]?.name || '';
       bValue = corretoresMap[b.corretorId]?.name || '';
+    } else if (sortKey === 'clientName') {
+      aValue = clientsMap[a.clientId]?.name || '';
+      bValue = clientsMap[b.clientId]?.name || '';
     } else {
       aValue = a[sortKey as keyof Sale];
       bValue = b[sortKey as keyof Sale];
@@ -124,7 +131,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
             Ajuste os filtros ou clique em 'Nova Venda' para adicionar uma.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores}/>
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} developments={developments} />
           </div>
         </div>
     );
@@ -147,7 +154,11 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                         Corretor <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 </TableHead>
-                <TableHead>Cliente</TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort('clientName')}>
+                        Cliente <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                </TableHead>
                 <TableHead>Empreendimento</TableHead>
                 <TableHead>Construtora</TableHead>
                 <TableHead className="text-right">
@@ -190,13 +201,13 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                         <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>
                         <TableCell>
                             <div className={cn("flex items-center gap-2", hasUrgentObservation(sale.observations) && 'font-bold text-yellow-700')}>
-                                {sale.clientName}
+                                {clientsMap[sale.clientId]?.name || 'N/A'}
                                 {sale.observations && <MessageSquare className="h-4 w-4 text-blue-500" />}
                                 {sale.combinado && <Handshake className="h-4 w-4 text-green-600" />}
                             </div>
                         </TableCell>
-                        <TableCell>{sale.empreendimento}</TableCell>
-                        <TableCell>{sale.construtora}</TableCell>
+                        <TableCell>{developmentsMap[sale.developmentId]?.name || 'N/A'}</TableCell>
+                        <TableCell>{developmentsMap[sale.developmentId]?.construtora || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                         {formatCurrency(sale.saleValue)}
                         </TableCell>
@@ -267,6 +278,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                 sale={editingSale}
                 onSaleSubmit={onSaleSubmit}
                 corretores={corretores}
+                clients={clients}
+                developments={developments}
             />
         )}
     </>

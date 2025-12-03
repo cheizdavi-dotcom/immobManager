@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
+import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getYear, getMonth } from 'date-fns';
-import type { Sale, Corretor } from '@/lib/types';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { KanbanBoard } from '@/components/kanban-board';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
@@ -25,7 +25,9 @@ export default function VendasPage() {
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
   const [salesData, setSalesData] = useLocalStorage<Sale[]>('sales', initialSales);
-  const [corretoresData, setCorretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+  const [corretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+  const [clientsData] = useLocalStorage<Client[]>('clients', initialClients);
+  const [developmentsData] = useLocalStorage<Development[]>('developments', initialDevelopments);
 
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {
@@ -45,16 +47,30 @@ export default function VendasPage() {
   };
 
 
+  const clientsMap = useMemo(() => {
+    return clientsData.reduce((acc, client) => {
+        acc[client.id] = client;
+        return acc;
+    }, {} as Record<string, Client>);
+  }, [clientsData]);
+
+  const developmentsMap = useMemo(() => {
+    return developmentsData.reduce((acc, dev) => {
+        acc[dev.id] = dev;
+        return acc;
+    }, {} as Record<string, Development>);
+  }, [developmentsData]);
+
   const filteredSales = useMemo(() => salesData.filter((sale) => {
     const saleDate = new Date(sale.saleDate);
     const saleMonth = getMonth(saleDate);
     const saleYear = getYear(saleDate);
 
-    const clientNameMatch = sale.clientName
+    const clientNameMatch = clientsMap[sale.clientId]?.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     
-    const construtoraMatch = construtoraFilter === 'all' || sale.construtora.toLowerCase() === construtoraFilter.toLowerCase();
+    const construtoraMatch = construtoraFilter === 'all' || (developmentsMap[sale.developmentId] && developmentsMap[sale.developmentId].construtora.toLowerCase() === construtoraFilter.toLowerCase());
 
     const monthMatch =
       monthFilter === 'all' || saleMonth === parseInt(monthFilter);
@@ -62,15 +78,15 @@ export default function VendasPage() {
     const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
 
     return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
-  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter]);
+  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap, developmentsMap]);
 
   const uniqueYears = useMemo(() => Array.from(
     new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
   ).sort((a,b) => b - a), [salesData]);
 
   const uniqueConstrutoras = useMemo(() => Array.from(
-    new Set(salesData.map((sale) => sale.construtora))
-  ).sort(), [salesData]);
+    new Set(developmentsData.map((dev) => dev.construtora))
+  ).sort(), [developmentsData]);
 
   const corretoresMap = useMemo(() => {
     return corretoresData.reduce((acc, corretor) => {
@@ -90,7 +106,7 @@ export default function VendasPage() {
                     <TabsTrigger value="tabela"><List className="h-4 w-4" /></TabsTrigger>
                     <TabsTrigger value="kanban"><LayoutGrid className="h-4 w-4" /></TabsTrigger>
                 </TabsList>
-                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} />
+                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} clients={clientsData} developments={developmentsData} />
             </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -145,6 +161,10 @@ export default function VendasPage() {
                     onDeleteSale={deleteSale}
                     corretores={corretoresData}
                     corretoresMap={corretoresMap}
+                    clientsMap={clientsMap}
+                    developmentsMap={developmentsMap}
+                    clients={clientsData}
+                    developments={developmentsData}
                 />
              </TabsContent>
               <TabsContent value="kanban" className="flex-1">
@@ -153,6 +173,11 @@ export default function VendasPage() {
                     statuses={ALL_STATUSES}
                     onSaleSubmit={addOrUpdateSale}
                     corretoresMap={corretoresMap}
+                    clientsMap={clientsMap}
+                    developmentsMap={developmentsMap}
+                    corretores={corretoresData}
+                    clients={clientsData}
+                    developments={developmentsData}
                  />
             </TabsContent>
         </div>

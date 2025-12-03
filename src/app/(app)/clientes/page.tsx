@@ -1,0 +1,163 @@
+'use client';
+import { useState } from 'react';
+import useLocalStorage from '@/hooks/useLocalStorage';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Trash2, Edit, Users, Phone } from 'lucide-react';
+import { NewClientDialog } from '@/components/new-client-dialog';
+import type { Client } from '@/lib/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { cva } from 'class-variance-authority';
+
+const statusBadgeVariants = cva('capitalize font-semibold', {
+  variants: {
+    status: {
+      Frio: 'bg-blue-100 text-blue-800 border-blue-200',
+      Morno: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      Quente: 'bg-orange-100 text-orange-800 border-orange-200',
+    },
+  },
+});
+
+export default function ClientesPage() {
+  const [clients, setClients] = useLocalStorage<Client[]>('clients', []);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const addOrUpdateClient = (client: Client) => {
+    setClients((prev) => {
+      const existingIndex = prev.findIndex((c) => c.id === client.id);
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        updated[existingIndex] = client;
+        return updated;
+      }
+      return [...prev, { ...client, id: new Date().toISOString() }];
+    });
+  };
+
+  const deleteClient = (clientId: string) => {
+    // TODO: Add logic to check if client is associated with a sale before deleting
+    setClients((prev) => prev.filter((c) => c.id !== clientId));
+    toast({
+      title: 'Cliente Excluído!',
+      description: 'O cliente foi removido da sua lista.',
+    });
+  };
+
+  const handleEdit = (client: Client) => {
+    setEditingClient(client);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setEditingClient(null);
+  };
+
+  const handleOpenNewDialog = () => {
+    setEditingClient(null);
+    setIsDialogOpen(true);
+  }
+
+  return (
+    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <div className="flex items-center justify-between">
+        <div>
+            <h1 className="text-2xl font-semibold">Gestão de Clientes</h1>
+            <p className="text-muted-foreground">Cadastre e gerencie sua carteira de clientes.</p>
+        </div>
+        <NewClientDialog
+          client={editingClient}
+          onClientSubmit={addOrUpdateClient}
+          isOpen={isDialogOpen}
+          onOpenChange={handleDialogClose}
+        >
+             <Button onClick={handleOpenNewDialog}>Novo Cliente</Button>
+        </NewClientDialog>
+      </div>
+
+      <Card>
+        <CardContent className='p-0'>
+          {clients.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>CPF</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => {
+                    const whatsappLink = `https://wa.me/${client.phone.replace(/\D/g, '')}`;
+                    return(
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>
+                         <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                            <Phone className="h-3 w-3" />
+                            {client.phone}
+                        </a>
+                    </TableCell>
+                    <TableCell>{client.cpf}</TableCell>
+                    <TableCell>
+                        <Badge className={statusBadgeVariants({ status: client.status})}>{client.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(client)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                       <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Essa ação não pode ser desfeita. Isso excluirá permanentemente o cliente.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteClient(client.id)}>
+                                Sim, excluir
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                )})}
+              </TableBody>
+            </Table>
+          ) : (
+             <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+                <Users className="h-16 w-16 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Nenhum cliente cadastrado</h2>
+                <p className="text-muted-foreground">
+                    Clique em 'Novo Cliente' para começar a montar sua carteira.
+                </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </main>
+  );
+}

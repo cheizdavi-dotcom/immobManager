@@ -30,7 +30,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { cn } from '@/lib/utils';
-import { ALL_STATUSES, type Sale, type Corretor } from '@/lib/types';
+import { ALL_STATUSES, type Sale, type Corretor, type Client, type Development } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -40,9 +40,8 @@ const saleSchema = z.object({
   id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
   corretorId: z.string().min(1, 'Selecione um corretor.'),
-  clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
-  empreendimento: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
-  construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
+  clientId: z.string().min(1, 'Selecione um cliente.'),
+  developmentId: z.string().min(1, 'Selecione um empreendimento.'),
   saleValue: z.number().min(0.01, 'O valor da venda deve ser maior que zero.'),
   atoValue: z.number().min(0, 'O valor do ato não pode ser negativo.'),
   commissionPercentage: z.preprocess(
@@ -56,6 +55,7 @@ const saleSchema = z.object({
   commissionStatus: z.enum(['Pendente', 'Pago']).optional(),
   observations: z.string().optional(),
   combinado: z.string().optional(),
+  combinadoDate: z.date().optional().nullable(),
 });
 
 
@@ -63,7 +63,7 @@ type SaleFormValues = z.infer<typeof saleSchema>;
 
 const formatCurrencyForInput = (value: number | undefined | string) => {
     if (value === undefined || value === null || value === '') return '';
-    const num = typeof value === 'string' ? parseFloat(value.replace(/\D/g, '')) / 100 : value;
+    const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9,]/g, '').replace(',', '.')) : value;
     if (isNaN(num)) return '';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
@@ -80,9 +80,11 @@ type NewSaleDialogProps = {
     isOpen?: boolean;
     onOpenChange?: (isOpen: boolean) => void;
     corretores: Corretor[];
+    clients: Client[];
+    developments: Development[];
 }
 
-export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores }: NewSaleDialogProps) {
+export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, developments }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const { toast } = useToast();
 
@@ -102,9 +104,6 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      clientName: '',
-      empreendimento: '',
-      construtora: '',
       status: 'Pendente',
       commissionStatus: 'Pendente',
       observations: '',
@@ -112,20 +111,31 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     },
   });
 
+  const developmentId = watch('developmentId');
+
+  useEffect(() => {
+    if (developmentId) {
+        const selectedDev = developments.find(d => d.id === developmentId);
+        if (selectedDev) {
+            setValue('construtora', selectedDev.construtora, { shouldValidate: true });
+        }
+    }
+  }, [developmentId, developments, setValue])
+
   useEffect(() => {
     if (isOpen) {
         if (isEditing && sale) {
         reset({
             ...sale,
             saleDate: new Date(sale.saleDate),
+            combinadoDate: sale.combinadoDate ? new Date(sale.combinadoDate) : null,
         });
         } else {
         reset({
             id: undefined,
             corretorId: '',
-            clientName: '',
-            empreendimento: '',
-            construtora: '',
+            clientId: '',
+            developmentId: '',
             status: 'Pendente',
             saleValue: 0,
             atoValue: 0,
@@ -135,6 +145,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             commissionStatus: 'Pendente',
             observations: '',
             combinado: '',
+            combinadoDate: null,
         });
         }
     }
@@ -156,16 +167,18 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   const onSubmit = (data: SaleFormValues) => {
     const finalData: Sale = {
         ...data,
-        commissionPercentage: data.commissionPercentage ?? 0,
         id: sale?.id || new Date().toISOString(),
         commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
         observations: data.observations || '',
         combinado: data.combinado || '',
+        combinadoDate: data.combinadoDate || null,
+        // This is a workaround because the select value is being set as construtora name instead of development id
+        construtora: developments.find(d => d.id === data.developmentId)?.construtora || '',
     };
     onSaleSubmit(finalData);
     toast({
       title: isEditing ? 'Venda Atualizada!' : 'Venda Cadastrada!',
-      description: `A venda para ${data.clientName} foi salva com sucesso.`,
+      description: `A venda foi salva com sucesso.`,
     });
     onOpenChange(false);
   };
@@ -187,7 +200,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             {isEditing ? 'Altere os detalhes da venda abaixo.' : 'Preencha os detalhes da venda abaixo.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-4">
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -249,21 +262,51 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
           
           <div className="space-y-2">
-              <Label htmlFor="clientName">Cliente</Label>
-              <Input id="clientName" {...register('clientName')} />
-              {errors.clientName && <p className="text-sm text-destructive">{errors.clientName.message}</p>}
+              <Label htmlFor="clientId">Cliente</Label>
+               <Controller
+                name="clientId"
+                control={control}
+                render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                           {clients.length > 0 ? clients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            )) : <SelectItem value="none" disabled>Nenhum cliente cadastrado</SelectItem>}
+                        </SelectContent>
+                    </Select>
+                )}
+              />
+              {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
           </div>
 
            <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="empreendimento">Empreendimento</Label>
-                <Input id="empreendimento" {...register('empreendimento')} />
-                {errors.empreendimento && <p className="text-sm text-destructive">{errors.empreendimento.message}</p>}
+                <Label htmlFor="developmentId">Empreendimento</Label>
+                 <Controller
+                    name="developmentId"
+                    control={control}
+                    render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {developments.length > 0 ? developments.map((d) => (
+                                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                )) : <SelectItem value="none" disabled>Nenhum empreendimento</SelectItem>}
+                            </SelectContent>
+                        </Select>
+                    )}
+                    />
+                {errors.developmentId && <p className="text-sm text-destructive">{errors.developmentId.message}</p>}
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="construtora">Construtora</Label>
-                <Input id="construtora" {...register('construtora')} />
+                <Input id="construtora" {...register('construtora')} readOnly className="bg-muted/50" />
                 {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
             </div>
           </div>
@@ -279,8 +322,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                         {...field}
                         placeholder="R$ 0,00"
                         onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(Number(value) / 100);
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            field.onChange(Number(value) / 100);
                         }}
                         value={formatCurrencyForInput(field.value)}
                     />
@@ -297,9 +340,9 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                     <Input
                         {...field}
                         placeholder="R$ 0,00"
-                        onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(Number(value) / 100);
+                         onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            field.onChange(Number(value) / 100);
                         }}
                         value={formatCurrencyForInput(field.value)}
                     />
@@ -322,8 +365,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                     placeholder="R$ 0,00"
                     className="bg-muted/50 font-semibold"
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      field.onChange(Number(value) / 100);
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        field.onChange(Number(value) / 100);
                     }}
                     value={formatCurrencyForInput(field.value)}
                   />
@@ -369,15 +412,53 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
               {errors.observations && <p className="text-sm text-destructive">{errors.observations.message}</p>}
             </div>
 
-             <div className="space-y-2">
-              <Label htmlFor="combinado">Combinado / Próximo Passo</Label>
-              <Textarea
-                id="combinado"
-                {...register('combinado')}
-                placeholder="Ex: Entrevista dia 15; Devolver contrato assinado..."
-                rows={2}
-              />
-              {errors.combinado && <p className="text-sm text-destructive">{errors.combinado.message}</p>}
+             <div className="grid grid-cols-2 gap-4 items-start">
+                <div className="space-y-2">
+                <Label htmlFor="combinado">Combinado / Próximo Passo</Label>
+                <Textarea
+                    id="combinado"
+                    {...register('combinado')}
+                    placeholder="Ex: Entrevista dia 15; Devolver contrato assinado..."
+                    rows={2}
+                />
+                {errors.combinado && <p className="text-sm text-destructive">{errors.combinado.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="combinadoDate">Data do Combinado</Label>
+                    <Controller
+                        name="combinadoDate"
+                        control={control}
+                        render={({ field }) => (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={'outline'}
+                                className={cn(
+                                'w-full justify-start text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? (
+                                format(field.value, 'dd/MM/yyyy')
+                                ) : (
+                                <span>Escolha uma data</span>
+                                )}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        )}
+                    />
+                     {errors.combinadoDate && <p className="text-sm text-destructive">{errors.combinadoDate.message}</p>}
+                 </div>
             </div>
         
           <div className="space-y-2">

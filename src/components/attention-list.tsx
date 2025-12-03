@@ -1,3 +1,4 @@
+'use client';
 import {
   Card,
   CardContent,
@@ -6,17 +7,18 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { Sale, Corretor } from '@/lib/types';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { differenceInDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { AlertTriangle } from 'lucide-react';
 
 type AttentionListProps = {
   sales: Sale[];
   corretoresMap: Record<string, Corretor>;
+  clientsMap: Record<string, Client>;
+  developmentsMap: Record<string, Development>;
 };
 
-export function AttentionList({ sales, corretoresMap }: AttentionListProps) {
+export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMap }: AttentionListProps) {
   const sortedSales = [...sales].sort(
     (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
   );
@@ -37,11 +39,13 @@ export function AttentionList({ sales, corretoresMap }: AttentionListProps) {
           {sortedSales.length > 0 ? (
             sortedSales.map((sale) => {
               const daysStopped = differenceInDays(new Date(), new Date(sale.saleDate));
+              const clientName = clientsMap[sale.clientId]?.name || 'N/A';
+              const developmentName = developmentsMap[sale.developmentId]?.name || 'N/A';
               return(
               <div key={sale.id} className="flex items-center gap-4">
                 <Avatar className="hidden h-9 w-9 sm:flex">
                   <AvatarFallback>
-                    {sale.clientName
+                    {clientName
                       .split(' ')
                       .map((n) => n[0])
                       .join('')
@@ -50,10 +54,10 @@ export function AttentionList({ sales, corretoresMap }: AttentionListProps) {
                 </Avatar>
                 <div className="grid gap-1">
                   <p className="text-sm font-medium leading-none">
-                    {sale.clientName}
+                    {clientName}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {corretoresMap[sale.corretorId]?.name || 'N/A'} - {sale.empreendimento}
+                    {corretoresMap[sale.corretorId]?.name || 'N/A'} - {developmentName}
                   </p>
                 </div>
                 <div className="ml-auto text-sm font-semibold text-yellow-600">
@@ -71,5 +75,3 @@ export function AttentionList({ sales, corretoresMap }: AttentionListProps) {
     </Card>
   );
 }
-
-    

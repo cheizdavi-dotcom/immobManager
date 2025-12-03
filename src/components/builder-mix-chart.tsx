@@ -1,5 +1,5 @@
 'use client';
-import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell, Legend } from 'recharts';
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/chart';
 import { formatCurrency } from '@/lib/utils';
 import { Building } from 'lucide-react';
+import { useMemo } from 'react';
 
 type ChartData = {
     name: string;
@@ -32,14 +33,16 @@ const COLORS = [
 ];
 
 export function BuilderMixChart({ data }: BuilderMixChartProps) {
-  const chartConfig = data.reduce((acc, item, index) => {
-    acc[item.name] = {
-      label: item.name,
-      color: COLORS[index % COLORS.length],
-    };
-    return acc;
-  }, {} as any);
-
+  const chartConfig = useMemo(() => {
+    return data.reduce((acc, item) => {
+        acc[item.name] = {
+            label: item.name,
+            color: COLORS[Object.keys(acc).length % COLORS.length],
+        };
+        return acc;
+    }, {} as any);
+  }, [data]);
+  
   if (data.length === 0) {
      return (
         <Card>
@@ -70,24 +73,22 @@ export function BuilderMixChart({ data }: BuilderMixChartProps) {
             </div>
             <CardDescription>Distribuição do VGV por construtora.</CardDescription>
         </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-          <ResponsiveContainer width="100%" height={350}>
+      <CardContent className='pb-0'>
+        <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
+          <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Tooltip
-                cursor={{ fill: "hsl(var(--muted))" }}
+                cursor={false}
                 content={<ChartTooltipContent
+                  hideLabel
                   formatter={(value, name) => `${formatCurrency(value as number)} (${((value as number / totalValue) * 100).toFixed(1)}%)`}
-                  nameKey="name"
                 />}
               />
               <Pie
                 data={data}
                 dataKey="value"
                 nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={120}
+                innerRadius={60}
                 strokeWidth={5}
               >
                 {data.map((entry, index) => (
@@ -98,8 +99,17 @@ export function BuilderMixChart({ data }: BuilderMixChartProps) {
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
+       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 p-4 text-sm text-muted-foreground">
+        {data.map((item) => (
+          <div key={item.name} className="flex items-center gap-1.5">
+            <div
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: chartConfig[item.name]?.color }}
+            />
+            {item.name}
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
-
-    

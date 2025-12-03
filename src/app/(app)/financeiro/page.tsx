@@ -2,9 +2,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiCard } from '@/components/kpi-card';
 import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
-import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
-import type { Sale, Corretor, CommissionStatus } from '@/lib/types';
-import { formatCurrency, cn } from '@/lib/utils';
+import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
+import type { Sale, Corretor, CommissionStatus, Client, Development } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -12,6 +12,7 @@ import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer', {
   variants: {
@@ -38,6 +39,8 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold', {
 export default function FinanceiroPage() {
     const [sales, setSales] = useLocalStorage<Sale[]>('sales', initialSales);
     const [corretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+    const [clients] = useLocalStorage<Client[]>('clients', initialClients);
+    const [developments] = useLocalStorage<Development[]>('developments', initialDevelopments);
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {
@@ -69,6 +72,15 @@ export default function FinanceiroPage() {
     const getCorretorName = (corretorId: string) => {
         return corretores.find(c => c.id === corretorId)?.name || 'N/A';
     }
+
+    const getClientName = (clientId: string) => {
+        return clients.find(c => c.id === clientId)?.name || 'N/A';
+    }
+
+     const getDevelopmentName = (developmentId: string) => {
+        return developments.find(d => d.id === developmentId)?.name || 'N/A';
+    }
+
 
     const toggleCommissionStatus = (saleId: string, currentStatus: CommissionStatus) => {
         const sale = sales.find(s => s.id === saleId);
@@ -159,8 +171,8 @@ export default function FinanceiroPage() {
                             <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{getCorretorName(sale.corretorId)}</TableCell>
                             <TableCell>
-                                <div className="font-medium">{sale.empreendimento}</div>
-                                <div className={cn("text-sm", sale.status !== 'Caiu' && "text-muted-foreground")}>{sale.clientName}</div>
+                                <div className="font-medium">{getDevelopmentName(sale.developmentId)}</div>
+                                <div className={cn("text-sm", sale.status !== 'Caiu' && "text-muted-foreground")}>{getClientName(sale.clientId)}</div>
                             </TableCell>
                             <TableCell>
                                 <Badge className={saleStatusBadgeVariants({status: sale.status})}>{sale.status}</Badge>

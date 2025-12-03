@@ -1,13 +1,15 @@
-import type { Sale, Corretor } from '@/lib/types';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { KanbanCard } from './kanban-card';
 
 type KanbanColumnProps = {
   title: string;
   sales: Sale[];
   corretoresMap: Record<string, Corretor>;
+  clientsMap: Record<string, Client>;
+  developmentsMap: Record<string, Development>;
 };
 
-export function KanbanColumn({ title, sales, corretoresMap }: KanbanColumnProps) {
+export function KanbanColumn({ title, sales, corretoresMap, clientsMap, developmentsMap }: KanbanColumnProps) {
   return (
     <div className="w-80 flex-shrink-0">
       <div className="flex items-center justify-between mb-4">
@@ -22,6 +24,8 @@ export function KanbanColumn({ title, sales, corretoresMap }: KanbanColumnProps)
             key={sale.id} 
             sale={sale} 
             corretorName={corretoresMap[sale.corretorId]?.name || 'N/A'}
+            clientName={clientsMap[sale.clientId]?.name || 'N/A'}
+            developmentName={developmentsMap[sale.developmentId]?.name || 'N/A'}
           />
         ))}
          {sales.length === 0 && (

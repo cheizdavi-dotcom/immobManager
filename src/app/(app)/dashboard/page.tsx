@@ -1,26 +1,30 @@
 'use client';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { Sale, Corretor } from '@/lib/types';
-import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
+import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
 import { useMemo } from 'react';
 import { KpiCard } from '@/components/kpi-card';
-import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Users, Building, AlertTriangle } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Users, Building, AlertTriangle, CalendarClock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
 import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
-import { isAfter, subDays } from 'date-fns';
+import { AgendaWidget } from '@/components/agenda-widget';
+import { isAfter, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 export default function DashboardPage() {
     const [sales] = useLocalStorage<Sale[]>('sales', initialSales);
     const [corretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+    const [clients] = useLocalStorage<Client[]>('clients', initialClients);
+    const [developments] = useLocalStorage<Development[]>('developments', initialDevelopments);
 
     const {
         vgvTotal,
         comissoesPagas,
         comissoesPendentes,
         conversionRate,
+        atosMesAtual,
     } = useMemo(() => {
         const completedSales = sales.filter(s => s.status === 'Pago');
         
@@ -37,7 +41,16 @@ export default function DashboardPage() {
         const totalClosedDeals = sales.filter(s => s.status === 'Pago' || s.status === 'Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
 
-        return { vgvTotal, comissoesPagas, comissoesPendentes, conversionRate };
+        const today = new Date();
+        const start = startOfMonth(today);
+        const end = endOfMonth(today);
+
+        const atosMesAtual = sales.filter(s => {
+            const saleDate = new Date(s.saleDate);
+            return isWithinInterval(saleDate, { start, end });
+        }).reduce((acc, s) => acc + s.atoValue, 0);
+
+        return { vgvTotal, comissoesPagas, comissoesPendentes, conversionRate, atosMesAtual };
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {
@@ -67,11 +80,17 @@ export default function DashboardPage() {
     }, [sales, corretores]);
 
     const builderMixData = useMemo(() => {
-        if (sales.length === 0) return [];
+        if (sales.length === 0 || developments.length === 0) return [];
+        
+        const developmentsMap = developments.reduce((acc, d) => {
+            acc[d.id] = d;
+            return acc;
+        }, {} as Record<string, Development>);
+
         const salesByBuilder = sales
-            .filter(s => s.status === 'Pago')
+            .filter(s => s.status === 'Pago' && developmentsMap[s.developmentId])
             .reduce((acc, sale) => {
-                const builder = sale.construtora;
+                const builder = developmentsMap[sale.developmentId].construtora;
                 if (!acc[builder]) {
                     acc[builder] = { name: builder, value: 0 };
                 }
@@ -80,7 +99,7 @@ export default function DashboardPage() {
         }, {} as Record<string, {name: string, value: number}>);
 
         return Object.values(salesByBuilder);
-    }, [sales]);
+    }, [sales, developments]);
 
     const attentionSales = useMemo(() => {
         const sevenDaysAgo = subDays(new Date(), 7);
@@ -97,8 +116,22 @@ export default function DashboardPage() {
         }, {} as Record<string, Corretor>);
     }, [corretores]);
 
+    const clientsMap = useMemo(() => {
+        return clients.reduce((acc, client) => {
+            acc[client.id] = client;
+            return acc;
+        }, {} as Record<string, Client>);
+    }, [clients]);
 
-    if (sales.length === 0) {
+     const developmentsMap = useMemo(() => {
+        return developments.reduce((acc, dev) => {
+            acc[dev.id] = dev;
+            return acc;
+        }, {} as Record<string, Development>);
+    }, [developments]);
+
+
+    if (sales.length === 0 && clients.length === 0) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
                  <div className="flex flex-col items-center gap-2">
@@ -115,11 +148,16 @@ export default function DashboardPage() {
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-             <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+             <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
                 <KpiCard
                     title="VGV Total (Vendas Pagas)"
                     value={formatCurrency(vgvTotal)}
                     icon={<DollarSign />}
+                />
+                 <KpiCard
+                    title="Entradas / Atos (Mês)"
+                    value={formatCurrency(atosMesAtual)}
+                    icon={<CalendarClock />}
                 />
                 <KpiCard
                     title="Comissões Pendentes"
@@ -138,21 +176,17 @@ export default function DashboardPage() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-5">
-                <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2 grid grid-cols-1 gap-4 md:gap-8">
                     <BrokerRankingChart data={brokerRankingData} />
-                </div>
-                <div className="lg:col-span-2">
                     <BuilderMixChart data={builderMixData} />
                 </div>
-            </div>
-
-            <div>
-                <AttentionList sales={attentionSales} corretoresMap={corretoresMap} />
+                <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-8">
+                     <AgendaWidget sales={sales} clientsMap={clientsMap} />
+                     <AttentionList sales={attentionSales} corretoresMap={corretoresMap} clientsMap={clientsMap} developmentsMap={developmentsMap} />
+                </div>
             </div>
 
         </main>
     );
 }
-
-    

@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Banknote,
+  Building,
   Building2,
   ChevronDown,
+  Home,
   LayoutDashboard,
   LogOut,
   TrendingUp,
@@ -42,6 +44,16 @@ const menuItems = [
     href: '/vendas',
     label: 'Vendas',
     icon: TrendingUp,
+  },
+  {
+    href: '/clientes',
+    label: 'Clientes',
+    icon: Users,
+  },
+  {
+    href: '/empreendimentos',
+    label: 'Empreendimentos',
+    icon: Building,
   },
   {
     href: '/corretores',

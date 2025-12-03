@@ -1,4 +1,4 @@
-import type { Sale, SaleStatus, Corretor } from '@/lib/types';
+import type { Sale, SaleStatus, Corretor, Client, Development } from '@/lib/types';
 import { KanbanColumn } from './kanban-column';
 import { FileText } from 'lucide-react';
 import { NewSaleDialog } from './new-sale-dialog';
@@ -9,10 +9,15 @@ type KanbanBoardProps = {
   statuses: SaleStatus[];
   onSaleSubmit: (sale: Sale) => void;
   corretoresMap: Record<string, Corretor>;
+  clientsMap: Record<string, Client>;
+  developmentsMap: Record<string, Development>;
+  corretores: Corretor[];
+  clients: Client[];
+  developments: Development[];
 };
 
-export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap }: KanbanBoardProps) {
-    const corretores = Object.values(corretoresMap);
+export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap, clientsMap, developmentsMap, corretores, clients, developments }: KanbanBoardProps) {
+
     if (sales.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg border-2 border-dashed border-muted-foreground/20 py-20">
@@ -22,7 +27,7 @@ export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap }: Ka
             Ajuste os filtros ou clique em 'Nova Venda' para adicionar uma.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} />
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} developments={developments} />
           </div>
         </div>
     );
@@ -38,6 +43,8 @@ export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap }: Ka
             title={status}
             sales={salesInStatus}
             corretoresMap={corretoresMap}
+            clientsMap={clientsMap}
+            developmentsMap={developmentsMap}
           />
         );
       })}
