@@ -17,9 +17,15 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cva } from 'class-variance-authority';
-import { Edit, Trash2, FileText, ArrowUpDown } from 'lucide-react';
+import { Edit, Trash2, FileText, ArrowUpDown, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { NewSaleDialog } from './new-sale-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type SalesTableProps = {
   sales: Sale[];
@@ -115,7 +121,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
 
 
   return (
-    <>
+    <TooltipProvider>
     <Card>
       <CardContent className="p-0">
         <Table>
@@ -138,6 +144,11 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                 <Button variant="ghost" onClick={() => handleSort('saleValue')}>
                     Valor Venda <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
+              </TableHead>
+               <TableHead className="text-right">
+                <Button variant="ghost" onClick={() => handleSort('atoValue')}>
+                    Ato <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
                 </TableHead>
               <TableHead className="text-right">
                  <Button variant="ghost" onClick={() => handleSort('commission')}>
@@ -155,11 +166,28 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                   {format(new Date(sale.saleDate), 'dd/MM/yyyy')}
                 </TableCell>
                 <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>
-                <TableCell>{sale.clientName}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{sale.clientName}</span>
+                    {sale.observations && (
+                       <Tooltip>
+                        <TooltipTrigger>
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">{sale.observations}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{sale.empreendimento}</TableCell>
                 <TableCell>{sale.construtora}</TableCell>
                 <TableCell className="text-right">
                   {formatCurrency(sale.saleValue)}
+                </TableCell>
+                 <TableCell className="text-right">
+                  {formatCurrency(sale.atoValue)}
                 </TableCell>
                 <TableCell className="text-right font-bold text-green-600">
                   {formatCurrency(sale.commission)}
@@ -192,6 +220,6 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
             corretores={corretores}
         />
     )}
-    </>
+    </TooltipProvider>
   );
 }

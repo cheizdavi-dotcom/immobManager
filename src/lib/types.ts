@@ -1,3 +1,4 @@
+
 export type SaleStatus = 'Pendente' | 'Pago' | 'Caiu';
 export type CommissionStatus = 'Pendente' | 'Pago';
 
@@ -18,10 +19,10 @@ export type Sale = {
   empreendimento: string;
   construtora: string;
   saleValue: number;
+  atoValue: number;
   commissionPercentage: number;
   commission: number;
   status: SaleStatus;
   commissionStatus: CommissionStatus;
+  observations?: string;
 };
-
-    

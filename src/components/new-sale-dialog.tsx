@@ -34,6 +34,7 @@ import { ALL_STATUSES, type Sale, type Corretor } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 
 const saleSchema = z.object({
   id: z.string().optional(),
@@ -45,6 +46,10 @@ const saleSchema = z.object({
   saleValue: z.preprocess(
     (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
     z.number().min(0.01, 'O valor da venda deve ser maior que zero.')
+  ),
+   atoValue: z.preprocess(
+    (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
+    z.number().min(0, 'O valor do ato não pode ser negativo.')
   ),
   commissionPercentage: z.preprocess(
     (a) => parseFloat(String(a).replace(/[^0-9.]/g, '')),
@@ -58,6 +63,7 @@ const saleSchema = z.object({
     errorMap: () => ({ message: 'Selecione um status válido.' }),
   }),
   commissionStatus: z.enum(['Pendente', 'Pago']).optional(),
+  observations: z.string().optional(),
 });
 
 type SaleFormValues = z.infer<typeof saleSchema>;
@@ -108,6 +114,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
       construtora: '',
       status: 'Pendente',
       commissionStatus: 'Pendente',
+      observations: '',
     },
   });
 
@@ -127,10 +134,12 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             construtora: '',
             status: 'Pendente',
             saleValue: 0,
+            atoValue: 0,
             commissionPercentage: 5,
             commission: 0,
             saleDate: new Date(),
             commissionStatus: 'Pendente',
+            observations: '',
         });
         }
     }
@@ -154,7 +163,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         ...data,
         commissionPercentage: data.commissionPercentage ?? 0,
         id: sale?.id || new Date().toISOString(),
-        commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente'
+        commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
+        observations: data.observations || '',
     };
     onSaleSubmit(finalData);
     toast({
@@ -262,17 +272,59 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             </div>
           </div>
 
+           <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-2">
+                <Label htmlFor="saleValue">Valor da Venda</Label>
+                <Controller
+                    name="saleValue"
+                    control={control}
+                    render={({ field }) => (
+                    <Input
+                        {...field}
+                        placeholder="R$ 0,00"
+                        onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(Number(value) / 100);
+                        }}
+                        value={formatCurrencyForInput(field.value)}
+                    />
+                    )}
+                />
+                {errors.saleValue && <p className="text-sm text-destructive">{errors.saleValue.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                <Label htmlFor="atoValue">Valor do Ato (Entrada)</Label>
+                <Controller
+                    name="atoValue"
+                    control={control}
+                    render={({ field }) => (
+                    <Input
+                        {...field}
+                        placeholder="R$ 0,00"
+                        onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(Number(value) / 100);
+                        }}
+                        value={formatCurrencyForInput(field.value)}
+                    />
+                    )}
+                />
+                {errors.atoValue && <p className="text-sm text-destructive">{errors.atoValue.message}</p>}
+                </div>
+           </div>
 
-          <div className="grid grid-cols-[1fr_80px] gap-4 items-end">
+
+          <div className="grid grid-cols-[1fr_100px] gap-4 items-end">
              <div className="space-y-2">
-              <Label htmlFor="saleValue">Valor da Venda</Label>
+              <Label htmlFor="commission">Valor da Comissão (R$)</Label>
               <Controller
-                name="saleValue"
+                name="commission"
                 control={control}
                 render={({ field }) => (
                   <Input
                     {...field}
                     placeholder="R$ 0,00"
+                    className="bg-muted/50 font-semibold"
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, '');
                       field.onChange(Number(value) / 100);
@@ -281,7 +333,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                   />
                 )}
               />
-              {errors.saleValue && <p className="text-sm text-destructive">{errors.saleValue.message}</p>}
+              {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
             </div>
 
              <div className="space-y-2">
@@ -310,25 +362,15 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             </div>
           </div>
 
-          <div className="space-y-2">
-              <Label htmlFor="commission">Valor da Comissão (R$)</Label>
-              <Controller
-                name="commission"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="R$ 0,00"
-                    className="bg-muted/50"
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      field.onChange(Number(value) / 100);
-                    }}
-                    value={formatCurrencyForInput(field.value)}
-                  />
-                )}
+           <div className="space-y-2">
+              <Label htmlFor="observations">Observações / Combinado</Label>
+              <Textarea
+                id="observations"
+                {...register('observations')}
+                placeholder="Ex: Cliente regularizando SPC, Aguardando esposa assinar..."
+                rows={3}
               />
-              {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
+              {errors.observations && <p className="text-sm text-destructive">{errors.observations.message}</p>}
             </div>
         
           <div className="space-y-2">
