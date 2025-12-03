@@ -15,8 +15,9 @@ type AttentionListProps = {
 };
 
 export function AttentionList({ sales }: AttentionListProps) {
-  // The logic for sorting is removed as lastStatusUpdate is no longer in the model
-  const sortedSales = [...sales];
+  const sortedSales = [...sales].sort(
+    (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+  );
 
   return (
     <Card>
@@ -45,7 +46,7 @@ export function AttentionList({ sales }: AttentionListProps) {
                     {sale.clientName}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {sale.project}
+                    {sale.empreendimento}
                   </p>
                 </div>
                 <div className="ml-auto font-medium text-sm">

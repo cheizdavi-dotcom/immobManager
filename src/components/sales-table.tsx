@@ -23,6 +23,8 @@ import { NewSaleDialog } from './new-sale-dialog';
 
 type SalesTableProps = {
   sales: Sale[];
+  onSaleSubmit: (sale: Sale) => void;
+  onDeleteSale: (saleId: string) => void;
 };
 
 type SortKey = keyof Sale;
@@ -40,9 +42,12 @@ const statusBadgeVariants = cva('capitalize font-semibold', {
   },
 });
 
-export function SalesTable({ sales }: SalesTableProps) {
+export function SalesTable({ sales, onSaleSubmit, onDeleteSale }: SalesTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('saleDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -52,10 +57,29 @@ export function SalesTable({ sales }: SalesTableProps) {
       setSortDirection('asc');
     }
   };
+  
+  const handleEdit = (sale: Sale) => {
+    setEditingSale(sale);
+    setIsDialogOpen(true);
+  }
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setEditingSale(null); // Clear editing state when dialog closes
+  }
+
 
   const sortedSales = [...sales].sort((a, b) => {
     const aValue = a[sortKey];
     const bValue = b[sortKey];
+    
+    if (sortKey === 'saleDate') {
+        const aDate = new Date(aValue).getTime();
+        const bDate = new Date(bValue).getTime();
+        if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
+        if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    }
 
     if (aValue < bValue) {
       return sortDirection === 'asc' ? -1 : 1;
@@ -75,7 +99,7 @@ export function SalesTable({ sales }: SalesTableProps) {
             Clique em 'Nova Venda' para começar a adicionar.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog />
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} />
           </div>
         </div>
     );
@@ -83,6 +107,7 @@ export function SalesTable({ sales }: SalesTableProps) {
 
 
   return (
+    <>
     <Card>
       <CardContent className="p-0">
         <Table>
@@ -96,6 +121,7 @@ export function SalesTable({ sales }: SalesTableProps) {
               <TableHead>Corretor</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Empreendimento</TableHead>
+              <TableHead>Construtora</TableHead>
               <TableHead className="text-right">Valor Venda</TableHead>
               <TableHead className="text-right">Comissão</TableHead>
               <TableHead>Status</TableHead>
@@ -108,9 +134,10 @@ export function SalesTable({ sales }: SalesTableProps) {
                 <TableCell>
                   {format(new Date(sale.saleDate), 'dd/MM/yyyy')}
                 </TableCell>
-                <TableCell>{sale.agentName}</TableCell>
+                <TableCell>{sale.corretor}</TableCell>
                 <TableCell>{sale.clientName}</TableCell>
-                <TableCell>{sale.project}</TableCell>
+                <TableCell>{sale.empreendimento}</TableCell>
+                <TableCell>{sale.construtora}</TableCell>
                 <TableCell className="text-right">
                   {formatCurrency(sale.saleValue)}
                 </TableCell>
@@ -123,10 +150,10 @@ export function SalesTable({ sales }: SalesTableProps) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="mr-2">
+                    <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleEdit(sale)}>
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => onDeleteSale(sale.id)}>
                         <Trash2 className="h-4 w-4" />
                     </Button>
                 </TableCell>
@@ -136,5 +163,14 @@ export function SalesTable({ sales }: SalesTableProps) {
         </Table>
       </CardContent>
     </Card>
+    {editingSale && (
+        <NewSaleDialog
+            isOpen={isDialogOpen}
+            onOpenChange={handleDialogClose}
+            sale={editingSale}
+            onSaleSubmit={onSaleSubmit}
+        />
+    )}
+    </>
   );
 }

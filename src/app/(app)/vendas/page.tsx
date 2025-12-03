@@ -11,16 +11,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ALL_BUILDERS } from '@/lib/types';
 import { getYear, getMonth } from 'date-fns';
+import type { Sale } from '@/lib/types';
 
 export default function VendasPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [builderFilter, setBuilderFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
+  const [salesData, setSalesData] = useState<Sale[]>(sales);
 
-  const filteredSales = sales.filter((sale) => {
+  const addOrUpdateSale = (sale: Sale) => {
+    setSalesData((prevSales) => {
+      const existingSaleIndex = prevSales.findIndex((s) => s.id === sale.id);
+      if (existingSaleIndex > -1) {
+        // Update existing sale
+        const updatedSales = [...prevSales];
+        updatedSales[existingSaleIndex] = sale;
+        return updatedSales;
+      } else {
+        // Add new sale
+        return [...prevSales, sale];
+      }
+    });
+  };
+
+  const deleteSale = (saleId: string) => {
+    setSalesData((prevSales) => prevSales.filter((s) => s.id !== saleId));
+  };
+
+
+  const filteredSales = salesData.filter((sale) => {
     const saleDate = new Date(sale.saleDate);
     const saleMonth = getMonth(saleDate);
     const saleYear = getYear(saleDate);
@@ -29,20 +49,16 @@ export default function VendasPage() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
-    // Builder is not directly on the sale object anymore.
-    // This logic needs to be adapted if we link projects to builders.
-    const builderMatch = builderFilter === 'all'; 
-
     const monthMatch =
       monthFilter === 'all' || saleMonth === parseInt(monthFilter);
 
     const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
 
-    return clientNameMatch && builderMatch && monthMatch && yearMatch;
+    return clientNameMatch && monthMatch && yearMatch;
   });
 
   const uniqueYears = Array.from(
-    new Set(sales.map((sale) => getYear(new Date(sale.saleDate))))
+    new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
   ).sort((a,b) => b - a);
 
   return (
@@ -50,7 +66,7 @@ export default function VendasPage() {
       <div className="flex flex-col gap-4 border-b p-4 md:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">Vendas Realizadas</h2>
-          <NewSaleDialog />
+          <NewSaleDialog onSaleSubmit={addOrUpdateSale}/>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -83,23 +99,10 @@ export default function VendasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={builderFilter} onValueChange={setBuilderFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Construtora" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Construtoras</SelectItem>
-              {ALL_BUILDERS.map((builder) => (
-                <SelectItem key={builder} value={builder}>
-                  {builder}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        <SalesTable sales={filteredSales} />
+        <SalesTable sales={filteredSales} onSaleSubmit={addOrUpdateSale} onDeleteSale={deleteSale} />
       </div>
     </main>
   );

@@ -14,12 +14,29 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
+import { useState } from 'react';
+
 
 export default function DashboardPage() {
-  // NOTE: This is a client component, but we'll re-evaluate data fetching
-  // once we connect to a real database. For now, we use the mock data.
-  const completedSales = sales.filter((sale) => sale.status === 'Pago');
-  const cancelledSales = sales.filter((sale) => sale.status === 'Caiu');
+  const [salesData, setSalesData] = useState<Sale[]>(sales);
+  
+  const addOrUpdateSale = (sale: Sale) => {
+    setSalesData((prevSales) => {
+      const existingSaleIndex = prevSales.findIndex((s) => s.id === sale.id);
+      if (existingSaleIndex > -1) {
+        // Update existing sale
+        const updatedSales = [...prevSales];
+        updatedSales[existingSaleIndex] = sale;
+        return updatedSales;
+      } else {
+        // Add new sale
+        return [...prevSales, sale];
+      }
+    });
+  };
+
+  const completedSales = salesData.filter((sale) => sale.status === 'Pago');
+  const cancelledSales = salesData.filter((sale) => sale.status === 'Caiu');
 
   const totalSalesValue = completedSales.reduce(
     (acc, sale) => acc + sale.saleValue,
@@ -31,7 +48,7 @@ export default function DashboardPage() {
     0
   );
 
-  const salesThisMonth = sales.filter((sale) =>
+  const salesThisMonth = salesData.filter((sale) =>
     isThisMonth(new Date(sale.saleDate))
   ).length;
 
@@ -41,9 +58,9 @@ export default function DashboardPage() {
       ? (completedSales.length / totalClosedDeals) * 100
       : 0;
 
-  const attentionSales = sales.filter((sale) => sale.status === 'Pendente');
+  const attentionSales = salesData.filter((sale) => sale.status === 'Pendente');
 
-  if (sales.length === 0) {
+  if (salesData.length === 0) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
         <div className="flex flex-col items-center gap-2">
@@ -54,7 +71,7 @@ export default function DashboardPage() {
             seus resultados.
           </p>
           <div className="mt-4">
-            <NewSaleDialog />
+            <NewSaleDialog onSaleSubmit={addOrUpdateSale}/>
           </div>
         </div>
       </main>

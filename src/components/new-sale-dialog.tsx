@@ -30,23 +30,18 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { cn } from '@/lib/utils';
-import {
-  ALL_STATUSES,
-  ALL_PROJECTS,
-  SaleStatus,
-  Project,
-} from '@/lib/types';
+import { ALL_STATUSES, type Sale, type SaleStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const saleSchema = z.object({
+  id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
-  agentName: z.string().min(1, 'O nome do corretor é obrigatório.'),
+  corretor: z.string().min(1, 'O nome do corretor é obrigatório.'),
   clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
-  project: z.enum(ALL_PROJECTS, {
-    errorMap: () => ({ message: 'Selecione um empreendimento válido.' }),
-  }),
+  empreendimento: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
+  construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
   saleValue: z.preprocess(
     (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
     z.number().min(0.01, 'O valor da venda deve ser maior que zero.')
@@ -69,9 +64,22 @@ const formatCurrencyForInput = (value: number | undefined | string) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
 
-export function NewSaleDialog() {
-  const [open, setOpen] = useState(false);
+type NewSaleDialogProps = {
+    onSaleSubmit: (sale: Sale) => void;
+    sale?: Sale | null;
+    isOpen?: boolean;
+    onOpenChange?: (isOpen: boolean) => void;
+}
+
+export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen }: NewSaleDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const { toast } = useToast();
+
+  const isOpen = controlledIsOpen ?? uncontrolledOpen;
+  const onOpenChange = setControlledIsOpen ?? setUncontrolledOpen;
+  
+  const isEditing = !!sale;
+
   const {
     register,
     handleSubmit,
@@ -83,11 +91,34 @@ export function NewSaleDialog() {
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      agentName: '',
+      corretor: '',
       clientName: '',
+      empreendimento: '',
+      construtora: '',
       status: 'Pendente',
     },
   });
+
+  useEffect(() => {
+    if (isEditing && sale) {
+      reset({
+        ...sale,
+        saleDate: new Date(sale.saleDate),
+      });
+    } else {
+      reset({
+        id: undefined,
+        corretor: '',
+        clientName: '',
+        empreendimento: '',
+        construtora: '',
+        status: 'Pendente',
+        saleValue: 0,
+        commission: 0,
+        saleDate: new Date()
+      });
+    }
+  }, [sale, isEditing, reset, isOpen]);
 
   const saleValue = watch('saleValue');
 
@@ -95,33 +126,40 @@ export function NewSaleDialog() {
     if (saleValue > 0) {
       const commissionValue = saleValue * 0.05;
       setValue('commission', commissionValue);
+    } else {
+      setValue('commission', 0);
     }
   }, [saleValue, setValue]);
 
 
   const onSubmit = (data: SaleFormValues) => {
-    console.log(data);
+    const finalData: Sale = {
+        ...data,
+        id: sale?.id || new Date().toISOString(),
+    };
+    onSaleSubmit(finalData);
     toast({
-      title: 'Venda Cadastrada!',
-      description: `A venda para ${data.clientName} foi criada com sucesso.`,
+      title: isEditing ? 'Venda Atualizada!' : 'Venda Cadastrada!',
+      description: `A venda para ${data.clientName} foi salva com sucesso.`,
     });
-    reset();
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2" />
-          Nova Venda
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {!isEditing && (
+         <DialogTrigger asChild>
+            <Button>
+                <PlusCircle className="mr-2" />
+                Nova Venda
+            </Button>
+         </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cadastrar Nova Venda</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Venda' : 'Cadastrar Nova Venda'}</DialogTitle>
           <DialogDescription>
-            Preencha os detalhes da venda abaixo.
+            {isEditing ? 'Altere os detalhes da venda abaixo.' : 'Preencha os detalhes da venda abaixo.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -164,9 +202,9 @@ export function NewSaleDialog() {
               {errors.saleDate && <p className="text-sm text-destructive">{errors.saleDate.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="agentName">Corretor</Label>
-              <Input id="agentName" {...register('agentName')} />
-              {errors.agentName && <p className="text-sm text-destructive">{errors.agentName.message}</p>}
+              <Label htmlFor="corretor">Corretor</Label>
+              <Input id="corretor" {...register('corretor')} />
+              {errors.corretor && <p className="text-sm text-destructive">{errors.corretor.message}</p>}
             </div>
           </div>
           
@@ -176,25 +214,18 @@ export function NewSaleDialog() {
               {errors.clientName && <p className="text-sm text-destructive">{errors.clientName.message}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="project">Empreendimento</Label>
-             <Controller
-              name="project"
-              control={control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALL_PROJECTS.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.project && <p className="text-sm text-destructive">{errors.project.message}</p>}
+           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="empreendimento">Empreendimento</Label>
+                <Input id="empreendimento" {...register('empreendimento')} />
+                {errors.empreendimento && <p className="text-sm text-destructive">{errors.empreendimento.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="construtora">Construtora</Label>
+                <Input id="construtora" {...register('construtora')} />
+                {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
+            </div>
           </div>
 
 
@@ -262,7 +293,7 @@ export function NewSaleDialog() {
           </div>
 
           <DialogFooter>
-            <Button type="submit">Salvar Venda</Button>
+            <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Salvar Venda'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

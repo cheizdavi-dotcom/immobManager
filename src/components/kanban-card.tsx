@@ -15,12 +15,12 @@ export function KanbanCard({ sale }: KanbanCardProps) {
         <div className="flex justify-between items-start">
             <CardTitle className="text-base font-semibold leading-tight">{sale.clientName}</CardTitle>
              <Badge variant="secondary">
-                {sale.project}
+                {sale.empreendimento}
             </Badge>
         </div>
         <p className="text-sm text-muted-foreground pt-1 flex items-center gap-1">
           <User className="w-3 h-3"/>
-          {sale.agentName}
+          {sale.corretor}
         </p>
       </CardHeader>
       <CardContent className="p-4 pt-0 text-sm space-y-2">
