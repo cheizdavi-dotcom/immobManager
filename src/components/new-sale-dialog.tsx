@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Popover,
   PopoverContent,
@@ -30,37 +29,45 @@ import { CalendarIcon, PlusCircle } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import {
   ALL_STATUSES,
   ALL_PROJECTS,
-  ALL_BUILDERS,
   SaleStatus,
   Project,
-  Builder,
 } from '@/lib/types';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const saleSchema = z.object({
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
+  agentName: z.string().min(1, 'O nome do corretor é obrigatório.'),
   clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
   project: z.enum(ALL_PROJECTS, {
     errorMap: () => ({ message: 'Selecione um empreendimento válido.' }),
   }),
-  builder: z.enum(ALL_BUILDERS, {
-    errorMap: () => ({ message: 'Selecione uma construtora válida.' }),
-  }),
-  downPayment: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9,]/g, '').replace(',', '.')),
-    z.number().min(0, 'O valor do ato não pode ser negativo.')
+  saleValue: z.preprocess(
+    (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
+    z.number().min(0.01, 'O valor da venda deve ser maior que zero.')
+  ),
+  commission: z.preprocess(
+    (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
+    z.number().min(0, 'A comissão não pode ser negativa.')
   ),
   status: z.enum(ALL_STATUSES, {
     errorMap: () => ({ message: 'Selecione um status válido.' }),
   }),
-  notes: z.string().optional(),
 });
+
+type SaleFormValues = z.infer<typeof saleSchema>;
+
+const formatCurrencyForInput = (value: number | undefined | string) => {
+    if (value === undefined || value === null || value === '') return '';
+    const num = typeof value === 'string' ? parseFloat(value.replace(/\D/g, '')) / 100 : value;
+    if (isNaN(num)) return '';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+};
 
 export function NewSaleDialog() {
   const [open, setOpen] = useState(false);
@@ -69,17 +76,30 @@ export function NewSaleDialog() {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors },
     reset,
-  } = useForm<z.infer<typeof saleSchema>>({
+  } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-        clientName: '',
-        notes: '',
-    }
+      agentName: '',
+      clientName: '',
+      status: 'Pendente',
+    },
   });
 
-  const onSubmit = (data: z.infer<typeof saleSchema>) => {
+  const saleValue = watch('saleValue');
+
+  useEffect(() => {
+    if (saleValue > 0) {
+      const commissionValue = saleValue * 0.05;
+      setValue('commission', commissionValue);
+    }
+  }, [saleValue, setValue]);
+
+
+  const onSubmit = (data: SaleFormValues) => {
     console.log(data);
     toast({
       title: 'Venda Cadastrada!',
@@ -97,7 +117,7 @@ export function NewSaleDialog() {
           Nova Venda
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cadastrar Nova Venda</DialogTitle>
           <DialogDescription>
@@ -105,74 +125,65 @@ export function NewSaleDialog() {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="saleDate" className="text-right">
-              Data
-            </Label>
-            <Controller
-              name="saleDate"
-              control={control}
-              render={({ field }) => (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-[240px] pl-3 text-left font-normal col-span-3',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, 'PPP')
-                      ) : (
-                        <span>Escolha uma data</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) =>
-                        date > new Date() || date < new Date('1900-01-01')
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-            />
-            {errors.saleDate && (
-              <p className="col-start-2 col-span-3 text-sm text-destructive">
-                {errors.saleDate.message}
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="clientName" className="text-right">
-              Cliente
-            </Label>
-            <Input id="clientName" {...register('clientName')} className="col-span-3" />
-            {errors.clientName && (
-              <p className="col-start-2 col-span-3 text-sm text-destructive">
-                {errors.clientName.message}
-              </p>
-            )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="saleDate">Data</Label>
+               <Controller
+                name="saleDate"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={'outline'}
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !field.value && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, 'dd/MM/yyyy')
+                        ) : (
+                          <span>Escolha uma data</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+              {errors.saleDate && <p className="text-sm text-destructive">{errors.saleDate.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="agentName">Corretor</Label>
+              <Input id="agentName" {...register('agentName')} />
+              {errors.agentName && <p className="text-sm text-destructive">{errors.agentName.message}</p>}
+            </div>
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="project" className="text-right">
-              Empreendimento
-            </Label>
-            <Controller
+          <div className="space-y-2">
+              <Label htmlFor="clientName">Cliente</Label>
+              <Input id="clientName" {...register('clientName')} />
+              {errors.clientName && <p className="text-sm text-destructive">{errors.clientName.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="project">Empreendimento</Label>
+             <Controller
               name="project"
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -183,62 +194,60 @@ export function NewSaleDialog() {
                 </Select>
               )}
             />
-            {errors.project && (
-              <p className="col-start-2 col-span-3 text-sm text-destructive">
-                {errors.project.message}
-              </p>
-            )}
+            {errors.project && <p className="text-sm text-destructive">{errors.project.message}</p>}
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="builder" className="text-right">
-              Construtora
-            </Label>
-             <Controller
-              name="builder"
-              control={control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALL_BUILDERS.map((b) => (
-                      <SelectItem key={b} value={b}>{b}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.builder && (
-              <p className="col-start-2 col-span-3 text-sm text-destructive">
-                {errors.builder.message}
-              </p>
-            )}
-          </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="downPayment" className="text-right">
-              Valor do Ato
-            </Label>
-            <Input id="downPayment" {...register('downPayment')} placeholder="R$ 0,00" className="col-span-3" />
-            {errors.downPayment && (
-              <p className="col-start-2 col-span-3 text-sm text-destructive">
-                {errors.downPayment.message}
-              </p>
-            )}
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <Label htmlFor="saleValue">Valor da Venda</Label>
+              <Controller
+                name="saleValue"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    placeholder="R$ 0,00"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      field.onChange(Number(value) / 100);
+                    }}
+                    value={formatCurrencyForInput(field.value)}
+                  />
+                )}
+              />
+              {errors.saleValue && <p className="text-sm text-destructive">{errors.saleValue.message}</p>}
+            </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="status" className="text-right">
-              Status
-            </Label>
-             <Controller
+             <div className="space-y-2">
+              <Label htmlFor="commission">Comissão (5%)</Label>
+              <Controller
+                name="commission"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    placeholder="R$ 0,00"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      field.onChange(Number(value) / 100);
+                    }}
+                    value={formatCurrencyForInput(field.value)}
+                  />
+                )}
+              />
+              {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
+            </div>
+          </div>
+        
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Controller
               name="status"
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -249,19 +258,9 @@ export function NewSaleDialog() {
                 </Select>
               )}
             />
-            {errors.status && (
-              <p className="col-start-2 col-span-3 text-sm text-destructive">
-                {errors.status.message}
-              </p>
-            )}
+            {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="notes" className="text-right">
-              Observações
-            </Label>
-            <Textarea id="notes" {...register('notes')} className="col-span-3" />
-          </div>
           <DialogFooter>
             <Button type="submit">Salvar Venda</Button>
           </DialogFooter>

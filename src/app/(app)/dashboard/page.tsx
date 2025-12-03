@@ -1,3 +1,4 @@
+'use client';
 import { sales } from '@/lib/data';
 import type { Sale } from '@/lib/types';
 import { isThisMonth } from 'date-fns';
@@ -9,24 +10,27 @@ import {
   TrendingUp,
   BarChart,
   Activity,
+  FileText,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { NewSaleDialog } from '@/components/new-sale-dialog';
 
 export default function DashboardPage() {
-  const completedSales = sales.filter(
-    (sale) => sale.status === 'Venda Concluída / Paga'
-  );
-  const cancelledSales = sales.filter(
-    (sale) => sale.status === 'Venda Caída / Cancelada'
-  );
-  
+  // NOTE: This is a client component, but we'll re-evaluate data fetching
+  // once we connect to a real database. For now, we use the mock data.
+  const completedSales = sales.filter((sale) => sale.status === 'Pago');
+  const cancelledSales = sales.filter((sale) => sale.status === 'Caiu');
+
   const totalSalesValue = completedSales.reduce(
     (acc, sale) => acc + sale.saleValue,
     0
   );
-  
-  const totalCommissions = totalSalesValue * 0.05; // Assuming 5% commission
-  
+
+  const totalCommissions = completedSales.reduce(
+    (acc, sale) => acc + sale.commission,
+    0
+  );
+
   const salesThisMonth = sales.filter((sale) =>
     isThisMonth(new Date(sale.saleDate))
   ).length;
@@ -37,25 +41,25 @@ export default function DashboardPage() {
       ? (completedSales.length / totalClosedDeals) * 100
       : 0;
 
-  const salesByBuilder = sales.reduce((acc, sale) => {
-    const builder = sale.builder;
-    if (!acc[builder]) {
-      acc[builder] = { sales: 0 };
-    }
-    if (sale.status === 'Venda Concluída / Paga') {
-      acc[builder].sales += sale.saleValue;
-    }
-    return acc;
-  }, {} as Record<string, { sales: number }>);
+  const attentionSales = sales.filter((sale) => sale.status === 'Pendente');
 
-  const chartData = Object.entries(salesByBuilder).map(([name, data]) => ({
-    name,
-    ...data,
-  }));
-
-  const attentionSales = sales.filter(
-    (sale) => sale.status === 'Em Análise de Crédito'
-  );
+  if (sales.length === 0) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
+        <div className="flex flex-col items-center gap-2">
+          <FileText className="h-16 w-16 text-muted-foreground" />
+          <h2 className="text-2xl font-semibold">Nenhuma venda registrada</h2>
+          <p className="text-muted-foreground">
+            Clique em 'Nova Venda' para começar a registrar suas vendas e ver
+            seus resultados.
+          </p>
+          <div className="mt-4">
+            <NewSaleDialog />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -83,7 +87,8 @@ export default function DashboardPage() {
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <SalesChart data={chartData} />
+          {/* Chart needs builder data which is not in the new Sale model */}
+          {/* <SalesChart data={chartData} /> */}
         </div>
         <div>
           <AttentionList sales={attentionSales} />

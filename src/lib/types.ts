@@ -1,19 +1,6 @@
-export type SaleStatus =
-  | 'Novo Cadastro'
-  | 'Em Análise de Crédito'
-  | 'Aprovado / Aguardando Unidade'
-  | 'Assinatura Pendente'
-  | 'Venda Concluída / Paga'
-  | 'Venda Caída / Cancelada';
+export type SaleStatus = 'Pendente' | 'Pago' | 'Caiu';
 
-export const ALL_STATUSES: SaleStatus[] = [
-  'Novo Cadastro',
-  'Em Análise de Crédito',
-  'Aprovado / Aguardando Unidade',
-  'Assinatura Pendente',
-  'Venda Concluída / Paga',
-  'Venda Caída / Cancelada',
-];
+export const ALL_STATUSES: SaleStatus[] = ['Pendente', 'Pago', 'Caiu'];
 
 export type Builder = 'Tenda' | 'Vasco' | 'MRV' | 'Outra';
 export const ALL_BUILDERS: Builder[] = ['Tenda', 'Vasco', 'MRV', 'Outra'];
@@ -36,14 +23,11 @@ export const ALL_PROJECTS: Project[] = [
 
 export type Sale = {
   id: string;
+  saleDate: Date;
+  agentName: string;
   clientName: string;
   project: Project;
-  builder: Builder;
   saleValue: number;
-  downPayment: number;
+  commission: number;
   status: SaleStatus;
-  saleDate: string;
-  lastStatusUpdate: string;
-  agentName: string;
-  notes?: string;
 };

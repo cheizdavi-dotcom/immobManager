@@ -15,16 +15,15 @@ type AttentionListProps = {
 };
 
 export function AttentionList({ sales }: AttentionListProps) {
-  const sortedSales = [...sales].sort(
-    (a, b) => new Date(a.lastStatusUpdate).getTime() - new Date(b.lastStatusUpdate).getTime()
-  );
+  // The logic for sorting is removed as lastStatusUpdate is no longer in the model
+  const sortedSales = [...sales];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Atenção</CardTitle>
+        <CardTitle>Pendentes</CardTitle>
         <CardDescription>
-          Clientes parados em "Análise de Crédito" há muito tempo.
+          Vendas que ainda não foram concluídas.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -50,7 +49,7 @@ export function AttentionList({ sales }: AttentionListProps) {
                   </p>
                 </div>
                 <div className="ml-auto font-medium text-sm">
-                  {formatDistanceToNow(new Date(sale.lastStatusUpdate), {
+                  {formatDistanceToNow(new Date(sale.saleDate), {
                     addSuffix: true,
                     locale: ptBR,
                   })}
