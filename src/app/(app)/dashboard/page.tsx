@@ -4,7 +4,7 @@ import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments, getSalesStorageKey, getCorretoresStorageKey, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
 import { useMemo } from 'react';
 import { KpiCard } from '@/components/kpi-card';
-import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Users, Building, AlertTriangle, CalendarClock } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Users, Building, AlertTriangle, CalendarClock, Package } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
@@ -24,22 +24,25 @@ export default function DashboardPage() {
     const [developments] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
 
     const {
-        vgvTotal,
+        faturamentoVendasPagas,
+        vgvPipelineAtivo,
         comissoesPagas,
         comissoesPendentes,
         conversionRate,
         atosMesAtual,
     } = useMemo(() => {
+        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
-        const vgvTotal = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
+        const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
+        const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
         const comissoesPagas = completedSales
             .filter(s => s.commissionStatus === 'Pago')
             .reduce((acc, s) => acc + (s.commission || 0), 0);
 
-        const comissoesPendentes = sales
-            .filter(s => s.status === 'Venda Concluída / Paga' && s.commissionStatus === 'Pendente')
+        const comissoesPendentes = activeSales
+            .filter(s => s.commissionStatus === 'Pendente')
             .reduce((acc_1, s_1) => acc_1 + (s_1.commission || 0), 0);
         
         const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
@@ -55,7 +58,7 @@ export default function DashboardPage() {
             return isWithinInterval(saleDate, { start, end });
         }).reduce((acc, s) => acc + (s.atoValue || 0), 0);
 
-        return { vgvTotal, comissoesPagas, comissoesPendentes, conversionRate, atosMesAtual };
+        return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate, atosMesAtual };
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {
@@ -150,17 +153,17 @@ export default function DashboardPage() {
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
              <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
                 <KpiCard
-                    title="VGV Total (Vendas Pagas)"
-                    value={formatCurrency(vgvTotal)}
+                    title="Faturamento (Vendas Pagas)"
+                    value={formatCurrency(faturamentoVendasPagas)}
                     icon={<DollarSign />}
                 />
                  <KpiCard
-                    title="Entradas / Atos (Mês)"
-                    value={formatCurrency(atosMesAtual)}
-                    icon={<CalendarClock />}
+                    title="VGV Pipeline (Ativo)"
+                    value={formatCurrency(vgvPipelineAtivo)}
+                    icon={<Package />}
                 />
                 <KpiCard
-                    title="Comissões Pendentes"
+                    title="Comissões a Pagar"
                     value={formatCurrency(comissoesPendentes)}
                     icon={<Clock className="text-yellow-500" />}
                 />
