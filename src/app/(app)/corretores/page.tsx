@@ -1,7 +1,7 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, User, Users, DollarSign, TrendingUp, Phone, List } from 'lucide-react';
+import { PlusCircle, User, Users, DollarSign, TrendingUp, Phone, List, Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { NewCorretorDialog } from '@/components/new-corretor-dialog';
 import { sales as initialSales } from '@/lib/data';
@@ -11,6 +11,9 @@ import { formatCurrency } from '@/lib/utils';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useState } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function CorretoresPage() {
   const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
@@ -19,6 +22,7 @@ export default function CorretoresPage() {
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [selectedCorretor, setSelectedCorretor] = useState<Corretor | null>(null);
+  const { toast } = useToast();
 
   const addOrUpdateCorretor = (corretor: Corretor) => {
     setCorretores((prev) => {
@@ -33,8 +37,20 @@ export default function CorretoresPage() {
   };
 
   const deleteCorretor = (corretorId: string) => {
+    const salesFromCorretor = sales.find(s => s.corretorId === corretorId);
+    if(salesFromCorretor){
+       toast({
+        variant: "destructive",
+        title: "Ação Bloqueada",
+        description: "Não é possível excluir um corretor que já possui vendas registradas.",
+      });
+      return;
+    }
     setCorretores((prev) => prev.filter((c) => c.id !== corretorId));
-    // Note: You might want to handle what happens to sales associated with a deleted corretor.
+    toast({
+        title: "Corretor Excluído!",
+        description: "O corretor foi removido da sua equipe.",
+    });
   };
 
   const handleEdit = (corretor: Corretor) => {
@@ -136,7 +152,27 @@ export default function CorretoresPage() {
                     <List className="h-4 w-4" /> Histórico
                 </Button>
                 <Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => handleEdit(corretor)}>Editar</Button>
-                <Button variant="ghost" size="sm" className="w-full justify-center text-destructive hover:text-destructive" onClick={() => deleteCorretor(corretor.id)}>Excluir</Button>
+                 <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-center text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" /> Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Essa ação não pode ser desfeita. Isso excluirá permanentemente o corretor.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteCorretor(corretor.id)}>
+                        Sim, excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </Card>
           )

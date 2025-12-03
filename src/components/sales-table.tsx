@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cva } from 'class-variance-authority';
 import { Edit, Trash2, FileText, ArrowUpDown, MessageSquare } from 'lucide-react';
@@ -26,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 type SalesTableProps = {
   sales: Sale[];
@@ -75,7 +76,6 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
     setEditingSale(null);
   }
 
-
   const sortedSales = [...sales].sort((a, b) => {
     let aValue, bValue;
 
@@ -103,6 +103,12 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
     }
     return 0;
   });
+  
+  const hasUrgentObservation = (observation?: string) => {
+      if (!observation) return false;
+      const urgentWords = ['spc', 'regularizando', 'pendente', 'dívida'];
+      return urgentWords.some(word => observation.toLowerCase().includes(word));
+  }
 
   if (sales.length === 0) {
     return (
@@ -161,7 +167,10 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
           </TableHeader>
           <TableBody>
             {sortedSales.map((sale) => (
-              <TableRow key={sale.id}>
+              <TableRow 
+                key={sale.id}
+                className={cn(hasUrgentObservation(sale.observations) && 'border-l-4 border-yellow-500')}
+              >
                 <TableCell>
                   {format(new Date(sale.saleDate), 'dd/MM/yyyy')}
                 </TableCell>
@@ -171,8 +180,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                     <span>{sale.clientName}</span>
                     {sale.observations && (
                        <Tooltip>
-                        <TooltipTrigger>
-                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        <TooltipTrigger asChild>
+                          <MessageSquare className="h-4 w-4 text-blue-500" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="max-w-xs">{sale.observations}</p>
@@ -201,9 +210,25 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                     <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleEdit(sale)}>
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => onDeleteSale(sale.id)}>
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                     <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Essa ação não pode ser desfeita. Isso excluirá permanentemente a venda e removerá os dados de nossos servidores.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onDeleteSale(sale.id)}>Excluir</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}
