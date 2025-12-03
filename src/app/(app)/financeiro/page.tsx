@@ -4,7 +4,7 @@ import { KpiCard } from '@/components/kpi-card';
 import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
 import { sales as initialSales, corretores as initialCorretores } from '@/lib/data';
 import type { Sale, Corretor, CommissionStatus } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
