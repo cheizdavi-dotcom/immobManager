@@ -18,7 +18,7 @@ export function KanbanCard({ sale, corretorName, clientName, developmentName }: 
         <div className="flex justify-between items-start">
             <CardTitle className="text-base font-semibold leading-tight">{clientName}</CardTitle>
              <Badge variant="secondary">
-                {developmentName}
+                {sale.empreendimento}
             </Badge>
         </div>
         <p className="text-sm text-muted-foreground pt-1 flex items-center gap-1">

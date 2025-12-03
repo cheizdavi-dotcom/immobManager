@@ -66,11 +66,11 @@ export default function VendasPage() {
     const saleMonth = getMonth(saleDate);
     const saleYear = getYear(saleDate);
 
-    const clientNameMatch = clientsMap[sale.clientId]?.name
+    const clientNameMatch = sale.clientName
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     
-    const construtoraMatch = construtoraFilter === 'all' || (developmentsMap[sale.developmentId] && developmentsMap[sale.developmentId].construtora.toLowerCase() === construtoraFilter.toLowerCase());
+    const construtoraMatch = construtoraFilter === 'all' || (sale.construtora && sale.construtora.toLowerCase() === construtoraFilter.toLowerCase());
 
     const monthMatch =
       monthFilter === 'all' || saleMonth === parseInt(monthFilter);
@@ -78,15 +78,15 @@ export default function VendasPage() {
     const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
 
     return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
-  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap, developmentsMap]);
+  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter]);
 
   const uniqueYears = useMemo(() => Array.from(
     new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
   ).sort((a,b) => b - a), [salesData]);
 
   const uniqueConstrutoras = useMemo(() => Array.from(
-    new Set(developmentsData.map((dev) => dev.construtora))
-  ).sort(), [developmentsData]);
+    new Set(salesData.map((dev) => dev.construtora).filter(Boolean))
+  ).sort(), [salesData]);
 
   const corretoresMap = useMemo(() => {
     return corretoresData.reduce((acc, corretor) => {

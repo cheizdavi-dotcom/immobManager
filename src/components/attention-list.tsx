@@ -39,8 +39,8 @@ export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMa
           {sortedSales.length > 0 ? (
             sortedSales.map((sale) => {
               const daysStopped = differenceInDays(new Date(), new Date(sale.saleDate));
-              const clientName = clientsMap[sale.clientId]?.name || 'N/A';
-              const developmentName = developmentsMap[sale.developmentId]?.name || 'N/A';
+              const clientName = sale.clientName || 'N/A';
+              const developmentName = sale.empreendimento || 'N/A';
               return(
               <div key={sale.id} className="flex items-center gap-4">
                 <Avatar className="hidden h-9 w-9 sm:flex">

@@ -35,11 +35,11 @@ export function AgendaWidget({ sales, clientsMap }: AgendaWidgetProps) {
         return {
           ...sale,
           day,
-          clientName: clientsMap[sale.clientId]?.name || 'Cliente desconhecido',
+          clientName: sale.clientName || 'Cliente desconhecido',
         };
       })
       .sort((a, b) => new Date(a.combinadoDate as Date).getTime() - new Date(b.combinadoDate as Date).getTime());
-  }, [sales, clientsMap]);
+  }, [sales]);
 
   return (
     <Card>

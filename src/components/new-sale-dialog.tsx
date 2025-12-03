@@ -35,15 +35,14 @@ import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
-import { CreatableCombobox } from '@/components/creatable-combobox';
-import useLocalStorage from '@/hooks/useLocalStorage';
 
 const saleSchema = z.object({
   id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
   corretorId: z.string().min(1, 'Selecione um corretor.'),
-  clientId: z.string().min(1, 'Selecione ou crie um cliente.'),
-  developmentId: z.string().min(1, 'Selecione ou crie um empreendimento.'),
+  clientName: z.string().min(1, 'O nome do cliente é obrigatório.'),
+  empreendimento: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
+  construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
   saleValue: z.number().min(0, 'O valor da venda não pode ser negativo.'),
   atoValue: z.number().min(0, 'O valor do ato não pode ser negativo.'),
   commissionPercentage: z.preprocess(
@@ -58,7 +57,6 @@ const saleSchema = z.object({
   observations: z.string().optional(),
   combinado: z.string().optional(),
   combinadoDate: z.date().optional().nullable(),
-  construtora: z.string().optional(),
 });
 
 
@@ -70,11 +68,6 @@ const formatCurrencyForInput = (value: number | undefined | string) => {
     if (isNaN(num)) return '';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
-
-const parseCurrency = (value: string): number => {
-    const num = parseFloat(value.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]+/g,""));
-    return isNaN(num) ? 0 : num;
-}
 
 const formatPercentageForInput = (value: number | undefined | null) => {
     if (value === undefined || value === null) return '';
@@ -94,9 +87,7 @@ type NewSaleDialogProps = {
 
 export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, developments }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [clientsData, setClientsData] = useLocalStorage<Client[]>('clients', clients);
-  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>('developments', developments);
-
+  
   const { toast } = useToast();
 
   const isOpen = controlledIsOpen ?? uncontrolledOpen;
@@ -123,19 +114,11 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
       atoValue: 0,
       commission: 0,
       commissionPercentage: 5,
+      clientName: '',
+      empreendimento: '',
+      construtora: '',
     },
   });
-
-  const developmentId = watch('developmentId');
-
-  useEffect(() => {
-    if (developmentId) {
-        const selectedDev = developmentsData.find(d => d.id === developmentId);
-        if (selectedDev) {
-            setValue('construtora', selectedDev.construtora, { shouldValidate: true });
-        }
-    }
-  }, [developmentId, developmentsData, setValue])
 
   useEffect(() => {
     if (isOpen) {
@@ -149,8 +132,9 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         reset({
             id: undefined,
             corretorId: '',
-            clientId: '',
-            developmentId: '',
+            clientName: '',
+            empreendimento: '',
+            construtora: '',
             status: 'Pendente',
             saleValue: 0,
             atoValue: 0,
@@ -183,11 +167,12 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     const finalData: Sale = {
         ...data,
         id: sale?.id || new Date().toISOString(),
+        clientId: data.clientName, // Using name as ID for simplicity now
+        developmentId: data.empreendimento, // Using name as ID for simplicity now
         commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
         observations: data.observations || '',
         combinado: data.combinado || '',
         combinadoDate: data.combinadoDate || null,
-        construtora: developmentsData.find(d => d.id === data.developmentId)?.construtora || '',
     };
     onSaleSubmit(finalData);
     toast({
@@ -197,9 +182,6 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     onOpenChange(false);
   };
   
-  const clientOptions = clientsData.map(c => ({ value: c.id, label: c.name }));
-  const developmentOptions = developmentsData.map(d => ({ value: d.id, label: d.name }));
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {!isEditing && (
@@ -279,65 +261,21 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
           
           <div className="space-y-2">
-              <Label htmlFor="clientId">Cliente</Label>
-               <Controller
-                name="clientId"
-                control={control}
-                render={({ field }) => (
-                    <CreatableCombobox
-                        options={clientOptions}
-                        value={field.value}
-                        onValueChange={(newValue, isNew) => {
-                            if (isNew) {
-                                const newClient = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio' as const };
-                                setClientsData(prev => [...prev, newClient]);
-                                field.onChange(newClient.id);
-                            } else {
-                                field.onChange(newValue);
-                            }
-                        }}
-                        placeholder="Selecione ou crie um cliente"
-                        searchPlaceholder="Pesquisar cliente..."
-                        emptyPlaceholder="Nenhum cliente encontrado."
-                        createPlaceholder={(val) => `Criar "${val}"`}
-                    />
-                )}
-              />
-              {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
+              <Label htmlFor="clientName">Cliente</Label>
+               <Input id="clientName" {...register('clientName')} placeholder="Digite o nome do cliente" />
+              {errors.clientName && <p className="text-sm text-destructive">{errors.clientName.message}</p>}
           </div>
 
            <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="developmentId">Empreendimento</Label>
-                 <Controller
-                    name="developmentId"
-                    control={control}
-                    render={({ field }) => (
-                        <CreatableCombobox
-                            options={developmentOptions}
-                            value={field.value}
-                            onValueChange={(newValue, isNew) => {
-                                if (isNew) {
-                                    const newDev = { id: new Date().toISOString(), name: newValue, construtora: 'A definir', localizacao: 'A definir' };
-                                    setDevelopmentsData(prev => [...prev, newDev]);
-                                    field.onChange(newDev.id);
-                                } else {
-                                    field.onChange(newValue);
-                                }
-                            }}
-                            placeholder="Selecione ou crie um empreendimento"
-                            searchPlaceholder="Pesquisar empreendimento..."
-                            emptyPlaceholder="Nenhum empreendimento encontrado."
-                            createPlaceholder={(val) => `Criar "${val}"`}
-                        />
-                    )}
-                    />
-                {errors.developmentId && <p className="text-sm text-destructive">{errors.developmentId.message}</p>}
+                <Label htmlFor="empreendimento">Empreendimento</Label>
+                 <Input id="empreendimento" {...register('empreendimento')} placeholder="Digite o nome do empreendimento" />
+                {errors.empreendimento && <p className="text-sm text-destructive">{errors.empreendimento.message}</p>}
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="construtora">Construtora</Label>
-                <Input id="construtora" {...register('construtora')} readOnly className="bg-muted/50" />
+                <Input id="construtora" {...register('construtora')} placeholder="Ex: Tenda, MRV" />
                 {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
             </div>
           </div>

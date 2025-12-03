@@ -92,8 +92,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
       aValue = corretoresMap[a.corretorId]?.name || '';
       bValue = corretoresMap[b.corretorId]?.name || '';
     } else if (sortKey === 'clientName') {
-      aValue = clientsMap[a.clientId]?.name || '';
-      bValue = clientsMap[b.clientId]?.name || '';
+      aValue = a.clientName || '';
+      bValue = b.clientName || '';
     } else {
       aValue = a[sortKey as keyof Sale];
       bValue = b[sortKey as keyof Sale];
@@ -201,13 +201,13 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                         <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>
                         <TableCell>
                             <div className={cn("flex items-center gap-2", hasUrgentObservation(sale.observations) && 'font-bold text-yellow-700')}>
-                                {clientsMap[sale.clientId]?.name || 'N/A'}
+                                {sale.clientName || 'N/A'}
                                 {sale.observations && <MessageSquare className="h-4 w-4 text-blue-500" />}
                                 {sale.combinado && <Handshake className="h-4 w-4 text-green-600" />}
                             </div>
                         </TableCell>
-                        <TableCell>{developmentsMap[sale.developmentId]?.name || 'N/A'}</TableCell>
-                        <TableCell>{developmentsMap[sale.developmentId]?.construtora || 'N/A'}</TableCell>
+                        <TableCell>{sale.empreendimento || 'N/A'}</TableCell>
+                        <TableCell>{sale.construtora || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                         {formatCurrency(sale.saleValue)}
                         </TableCell>

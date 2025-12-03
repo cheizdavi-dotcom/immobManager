@@ -31,8 +31,10 @@ export type Sale = {
   id: string;
   saleDate: Date;
   corretorId: string;
-  clientId: string;
-  developmentId: string;
+  clientId: string; // This is not an ID anymore, it's the client name
+  clientName: string;
+  developmentId: string; // This is not an ID anymore, it's the development name
+  empreendimento: string;
   construtora: string;
   saleValue: number;
   atoValue: number;

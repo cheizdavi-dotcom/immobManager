@@ -24,8 +24,8 @@ export function KanbanColumn({ title, sales, corretoresMap, clientsMap, developm
             key={sale.id} 
             sale={sale} 
             corretorName={corretoresMap[sale.corretorId]?.name || 'N/A'}
-            clientName={clientsMap[sale.clientId]?.name || 'N/A'}
-            developmentName={developmentsMap[sale.developmentId]?.name || 'N/A'}
+            clientName={sale.clientName || 'N/A'}
+            developmentName={sale.empreendimento || 'N/A'}
           />
         ))}
          {sales.length === 0 && (

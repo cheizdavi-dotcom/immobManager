@@ -80,17 +80,12 @@ export default function DashboardPage() {
     }, [sales, corretores]);
 
     const builderMixData = useMemo(() => {
-        if (sales.length === 0 || developments.length === 0) return [];
-        
-        const developmentsMap = developments.reduce((acc, d) => {
-            acc[d.id] = d;
-            return acc;
-        }, {} as Record<string, Development>);
+        if (sales.length === 0) return [];
 
         const salesByBuilder = sales
-            .filter(s => s.status === 'Pago' && developmentsMap[s.developmentId])
+            .filter(s => s.status === 'Pago')
             .reduce((acc, sale) => {
-                const builder = developmentsMap[sale.developmentId].construtora;
+                const builder = sale.construtora;
                 if (!acc[builder]) {
                     acc[builder] = { name: builder, value: 0 };
                 }
@@ -99,7 +94,7 @@ export default function DashboardPage() {
         }, {} as Record<string, {name: string, value: number}>);
 
         return Object.values(salesByBuilder);
-    }, [sales, developments]);
+    }, [sales]);
 
     const attentionSales = useMemo(() => {
         const sevenDaysAgo = subDays(new Date(), 7);
