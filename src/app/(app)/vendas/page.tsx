@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
+import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments, getSalesStorageKey, getCorretoresStorageKey, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
 import { Input } from '@/components/ui/input';
@@ -18,16 +18,21 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
 import useLocalStorage from '@/hooks/useLocalStorage';
+import { useAuth } from '@/hooks/useAuth.tsx';
 
 export default function VendasPage() {
+  const { user } = useAuth();
+  const userEmail = user?.email || '';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
-  const [salesData, setSalesData] = useLocalStorage<Sale[]>('sales', initialSales);
-  const [corretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
-  const [clientsData, setClientsData] = useLocalStorage<Client[]>('clients', initialClients);
-  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>('developments', initialDevelopments);
+  
+  const [salesData, setSalesData] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);
+  const [corretoresData] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
+  const [clientsData, setClientsData] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
+  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
 
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {

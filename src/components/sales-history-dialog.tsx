@@ -15,6 +15,9 @@ import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
 import { useMemo } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
+import { useAuth } from '@/hooks/useAuth.tsx';
+import { clients as initialClients, developments as initialDevelopments, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
+
 
 type SalesHistoryDialogProps = {
     isOpen: boolean;
@@ -38,8 +41,10 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
 
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
-    const [clientsData] = useLocalStorage<Client[]>('clients', []);
-    const [developmentsData] = useLocalStorage<Development[]>('developments', []);
+    const { user } = useAuth();
+    const userEmail = user?.email || '';
+    const [clientsData] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
+    const [developmentsData] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
 
     const clientsMap = useMemo(() => {
         return clientsData.reduce((acc, client) => {

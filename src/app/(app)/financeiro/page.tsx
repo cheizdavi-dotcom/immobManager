@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiCard } from '@/components/kpi-card';
 import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
-import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
+import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments, getSalesStorageKey, getCorretoresStorageKey, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
 import type { Sale, Corretor, CommissionStatus, Client, Development } from '@/lib/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,7 @@ import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth.tsx';
 
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
@@ -37,10 +38,13 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function FinanceiroPage() {
-    const [sales, setSales] = useLocalStorage<Sale[]>('sales', initialSales);
-    const [corretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
-    const [clients] = useLocalStorage<Client[]>('clients', initialClients);
-    const [developments] = useLocalStorage<Development[]>('developments', initialDevelopments);
+    const { user } = useAuth();
+    const userEmail = user?.email || '';
+    
+    const [sales, setSales] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);
+    const [corretores] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
+    const [clients] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
+    const [developments] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {

@@ -1,7 +1,7 @@
 'use client';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
-import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
+import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments, getSalesStorageKey, getCorretoresStorageKey, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
 import { useMemo } from 'react';
 import { KpiCard } from '@/components/kpi-card';
 import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Users, Building, AlertTriangle, CalendarClock } from 'lucide-react';
@@ -12,12 +12,16 @@ import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
 import { isAfter, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth.tsx';
 
 export default function DashboardPage() {
-    const [sales] = useLocalStorage<Sale[]>('sales', initialSales);
-    const [corretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
-    const [clients] = useLocalStorage<Client[]>('clients', initialClients);
-    const [developments] = useLocalStorage<Development[]>('developments', initialDevelopments);
+    const { user } = useAuth();
+    const userEmail = user?.email || '';
+
+    const [sales] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);
+    const [corretores] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
+    const [clients] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
+    const [developments] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
 
     const {
         vgvTotal,
