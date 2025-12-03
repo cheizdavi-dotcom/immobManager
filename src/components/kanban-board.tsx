@@ -35,9 +35,19 @@ export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap, clie
     );
   }
 
+  const statusOrder: SaleStatus[] = [
+    'Proposta / Cadastro',
+    'Análise de Crédito / SPC',
+    'Aguardando Assinatura',
+    'Aguardando Pagamento Ato',
+    'Venda Concluída / Paga',
+    'Venda Cancelada / Caiu',
+  ];
+
   return (
     <div className="flex gap-6 min-h-[calc(100vh-250px)] overflow-x-auto pb-4">
-      {statuses.map((status) => {
+      {statusOrder.map((status) => {
+        if (!statuses.includes(status)) return null;
         const salesInStatus = sales.filter((sale) => sale.status === status);
         return (
           <KanbanColumn

@@ -109,7 +109,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      status: 'Pendente',
+      status: 'Proposta / Cadastro',
       commissionStatus: 'Pendente',
       observations: '',
       combinado: '',
@@ -138,7 +138,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             clientId: '',
             developmentId: '',
             construtora: '',
-            status: 'Pendente',
+            status: 'Proposta / Cadastro',
             saleValue: 0,
             atoValue: 0,
             commissionPercentage: 5,
@@ -182,8 +182,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         observations: data.observations || '',
         combinado: data.combinado || '',
         combinadoDate: data.combinadoDate || null,
-        clientName: clients.find(c => c.id === data.clientId)?.name || '',
-        empreendimento: developments.find(d => d.id === data.developmentId)?.name || '',
+        clientName: clients.find(c => c.id === data.clientId)?.name || data.clientId,
+        empreendimento: developments.find(d => d.id === data.developmentId)?.name || data.developmentId,
     };
     onSaleSubmit(finalData);
     toast({
@@ -309,9 +309,11 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                             value={field.value}
                             onChange={(newValue, isNew) => {
                                 if (isNew && newValue) {
+                                    // When creating a new development, we can prompt for construtora or leave it blank
                                     const newDev: Development = { id: new Date().toISOString(), name: newValue, construtora: '', localizacao: '' };
                                     setDevelopments(prev => [...prev, newDev]);
                                     field.onChange(newDev.id);
+                                    setValue('construtora', ''); // Reset construtora
                                 } else {
                                     field.onChange(newValue);
                                 }
@@ -324,7 +326,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
             <div className="space-y-2">
                 <Label htmlFor="construtora">Construtora</Label>
-                <Input id="construtora" {...register('construtora')} placeholder="Ex: Tenda, MRV" />
+                <Input id="construtora" {...register('construtora')} placeholder="Ex: Tenda, MRV" readOnly />
                 {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
             </div>
           </div>
@@ -480,7 +482,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             </div>
         
           <div className="space-y-2">
-            <Label htmlFor="status">Status da Venda</Label>
+            <Label htmlFor="status">Etapa do Funil</Label>
             <Controller
               name="status"
               control={control}
