@@ -1,5 +1,5 @@
 'use client';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Defs, LinearGradient, Stop } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import {
   Card,
   CardContent,
@@ -8,8 +8,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import {
-  ChartContainer,
-  ChartTooltipContent,
+  ChartContainer
 } from '@/components/ui/chart';
 import { formatCurrency } from '@/lib/utils';
 import { Users } from 'lucide-react';
@@ -81,12 +80,6 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30 }} barCategoryGap="20%">
-              <Defs>
-                <LinearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.8}/>
-                  <Stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.1}/>
-                </LinearGradient>
-              </Defs>
               <CartesianGrid horizontal={false} strokeDasharray="3 3" />
               <YAxis
                 dataKey="name"
@@ -112,7 +105,7 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
                 cursor={{ fill: "hsl(var(--muted))" }}
                 content={<CustomTooltip />}
               />
-              <Bar dataKey="total" fill="url(#barGradient)" radius={[0, 4, 4, 0]} isAnimationActive={true}/>
+              <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} isAnimationActive={true}/>
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
