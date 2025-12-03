@@ -22,3 +22,5 @@ export type Sale = {
   status: SaleStatus;
   commissionStatus: CommissionStatus;
 };
+
+    
