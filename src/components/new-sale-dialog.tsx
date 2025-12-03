@@ -25,12 +25,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, PlusCircle } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Percent } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { cn } from '@/lib/utils';
-import { ALL_STATUSES, type Sale, type SaleStatus, type Corretor, CommissionStatus } from '@/lib/types';
+import { ALL_STATUSES, type Sale, type Corretor } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +45,10 @@ const saleSchema = z.object({
   saleValue: z.preprocess(
     (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
     z.number().min(0.01, 'O valor da venda deve ser maior que zero.')
+  ),
+  commissionPercentage: z.preprocess(
+    (a) => parseFloat(String(a).replace(/[^0-9.]/g, '')),
+    z.number().min(0, 'A porcentagem não pode ser negativa.').optional().nullable()
   ),
   commission: z.preprocess(
     (a) => parseFloat(String(a).replace(/\D/g, '')) / 100,
@@ -64,6 +68,12 @@ const formatCurrencyForInput = (value: number | undefined | string) => {
     if (isNaN(num)) return '';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
+
+const formatPercentageForInput = (value: number | undefined | null) => {
+    if (value === undefined || value === null) return '';
+    return String(value);
+};
+
 
 type NewSaleDialogProps = {
     onSaleSubmit: (sale: Sale) => void;
@@ -117,6 +127,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             construtora: '',
             status: 'Pendente',
             saleValue: 0,
+            commissionPercentage: 5,
             commission: 0,
             saleDate: new Date(),
             commissionStatus: 'Pendente',
@@ -126,23 +137,24 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   }, [sale, isEditing, reset, isOpen]);
 
   const saleValue = watch('saleValue');
+  const commissionPercentage = watch('commissionPercentage');
+
 
   useEffect(() => {
-    // Only suggest commission if the field hasn't been manually edited.
-    if (saleValue > 0 && !dirtyFields.commission) {
-      const commissionValue = saleValue * 0.05;
+    const isCommissionManuallyEdited = dirtyFields.commission;
+    if (!isCommissionManuallyEdited && saleValue > 0 && commissionPercentage && commissionPercentage > 0) {
+      const commissionValue = saleValue * (commissionPercentage / 100);
       setValue('commission', commissionValue);
-    } else if (saleValue <= 0 && !dirtyFields.commission) {
-      setValue('commission', 0);
     }
-  }, [saleValue, setValue, dirtyFields.commission]);
+  }, [saleValue, commissionPercentage, setValue, dirtyFields.commission]);
 
 
   const onSubmit = (data: SaleFormValues) => {
     const finalData: Sale = {
         ...data,
+        commissionPercentage: data.commissionPercentage ?? 0,
         id: sale?.id || new Date().toISOString(),
-        commissionStatus: isEditing ? sale.commissionStatus : 'Pendente'
+        commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente'
     };
     onSaleSubmit(finalData);
     toast({
@@ -162,7 +174,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             </Button>
          </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Venda' : 'Cadastrar Nova Venda'}</DialogTitle>
           <DialogDescription>
@@ -251,7 +263,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
 
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-[1fr_80px] gap-4 items-end">
              <div className="space-y-2">
               <Label htmlFor="saleValue">Valor da Venda</Label>
               <Controller
@@ -273,6 +285,32 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             </div>
 
              <div className="space-y-2">
+              <Label htmlFor="commissionPercentage">Comissão (%)</Label>
+              <div className="relative">
+                <Controller
+                  name="commissionPercentage"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      type="text"
+                      placeholder="5"
+                      className="pl-2 pr-6"
+                      onChange={(e) => {
+                         const value = e.target.value.replace(/[^0-9.]/g, '');
+                         field.onChange(value === '' ? null : parseFloat(value));
+                      }}
+                      value={formatPercentageForInput(field.value)}
+                    />
+                  )}
+                />
+                <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+              {errors.commissionPercentage && <p className="text-sm text-destructive">{errors.commissionPercentage.message}</p>}
+            </div>
+          </div>
+
+          <div className="space-y-2">
               <Label htmlFor="commission">Valor da Comissão (R$)</Label>
               <Controller
                 name="commission"
@@ -281,6 +319,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                   <Input
                     {...field}
                     placeholder="R$ 0,00"
+                    className="bg-muted/50"
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, '');
                       field.onChange(Number(value) / 100);
@@ -291,7 +330,6 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
               />
               {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
             </div>
-          </div>
         
           <div className="space-y-2">
             <Label htmlFor="status">Status da Venda</Label>

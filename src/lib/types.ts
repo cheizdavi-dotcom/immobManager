@@ -18,6 +18,7 @@ export type Sale = {
   empreendimento: string;
   construtora: string;
   saleValue: number;
+  commissionPercentage: number;
   commission: number;
   status: SaleStatus;
   commissionStatus: CommissionStatus;
