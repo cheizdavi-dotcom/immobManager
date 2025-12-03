@@ -14,7 +14,7 @@ import useLocalStorage from '@/hooks/useLocalStorage';
 import { useMemo } from 'react';
 
 
-const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer', {
+const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
   variants: {
     status: {
       Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
@@ -23,7 +23,7 @@ const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-point
   },
 });
 
-const saleStatusBadgeVariants = cva('capitalize font-semibold', {
+const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
   variants: {
     status: {
       Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -56,7 +56,7 @@ export default function FinanceiroPage() {
             .filter(s => s.commissionStatus === 'Pendente')
             .reduce((acc, s) => acc + s.commission, 0);
         
-        const lucroBruto = faturamentoTotal - comissoesPagas;
+        const lucroBruto = faturamentoTotal - comissoesPagas - comissoesPendentes;
         
         return { faturamentoTotal, comissoesPagas, comissoesPendentes, lucroBruto };
     }, [sales]);
@@ -113,6 +113,12 @@ export default function FinanceiroPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+       <div className="flex items-center justify-between">
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
+                <p className="text-muted-foreground">Acompanhe o fluxo de caixa da sua operação.</p>
+            </div>
+        </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
             <KpiCard
                 title="Faturamento (Vendas Pagas)"
@@ -130,7 +136,7 @@ export default function FinanceiroPage() {
                 icon={<Clock className="text-yellow-500" />}
             />
              <KpiCard
-                title="Lucro Bruto (Após Comissões)"
+                title="Lucro Bruto (A Receber)"
                 value={formatCurrency(lucroBruto)}
                 icon={<TrendingUp />}
             />
@@ -144,26 +150,26 @@ export default function FinanceiroPage() {
         <CardContent>
             <Table>
                 <TableHeader>
-                    <TableRow>
+                    <TableRow className='hover:bg-card'>
                         <TableHead>Data Venda</TableHead>
                         <TableHead>Corretor</TableHead>
                         <TableHead>Referente à Venda</TableHead>
                         <TableHead>Status da Venda</TableHead>
                         <TableHead className="text-right">Valor Comissão</TableHead>
-                        <TableHead className="text-center">Status Pagamento</TableHead>
+                        <TableHead className="text-center pr-6">Status Pagamento</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {commissionsToDisplay.map(sale => (
                         <TableRow 
                             key={sale.id}
-                            className={cn(sale.status === 'Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
+                            className={cn('border-x-0', sale.status === 'Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
                         >
                             <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{getCorretorName(sale.corretorId)}</TableCell>
                             <TableCell>
                                 <div className="font-medium">{sale.empreendimento}</div>
-                                <div className={cn("text-sm", sale.status !== 'Caiu' && "text-muted-foreground")}>{sale.clientName}</div>
+                                <div className={cn("text-sm", sale.status !== 'Caiu' ? "text-muted-foreground" : "text-inherit")}>{sale.clientName}</div>
                             </TableCell>
                             <TableCell>
                                 <Badge className={saleStatusBadgeVariants({status: sale.status})}>{sale.status}</Badge>

@@ -38,7 +38,7 @@ type SalesTableProps = {
 
 type SortKey = keyof Sale | 'corretorName' | 'clientName';
 
-const statusBadgeVariants = cva('capitalize font-semibold', {
+const statusBadgeVariants = cva('capitalize font-semibold text-xs', {
   variants: {
     status: {
       Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -145,7 +145,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
         <CardContent className="p-0">
             <Table>
             <TableHeader>
-                <TableRow>
+                <TableRow className='hover:bg-card'>
                 <TableHead className="w-[120px]">
                     <Button variant="ghost" onClick={() => handleSort('saleDate')}>
                     Data <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -179,7 +179,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                     </Button>
                 </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right pr-6">Ações</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -187,7 +187,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                 <React.Fragment key={sale.id}>
                     <TableRow 
                         className={cn(
-                            hasUrgentObservation(sale.observations) && 'border-l-4 border-yellow-500',
+                            'border-x-0',
+                            hasUrgentObservation(sale.observations) && 'border-l-4 border-yellow-400',
                             (sale.observations || sale.combinado) && 'cursor-pointer'
                         )}
                         onClick={() => (sale.observations || sale.combinado) && handleToggleRow(sale.id)}
@@ -202,7 +203,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                         </TableCell>
                         <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>
                         <TableCell>
-                            <div className={cn("flex items-center gap-2", hasUrgentObservation(sale.observations) && 'font-bold text-yellow-700')}>
+                            <div className={cn("flex items-center gap-2", hasUrgentObservation(sale.observations) && 'font-bold text-yellow-600')}>
                                 {clientsMap[sale.clientId]?.name || 'N/A'}
                                 {sale.observations && <MessageSquare className="h-4 w-4 text-blue-500" />}
                                 {sale.combinado && <Handshake className="h-4 w-4 text-green-600" />}
@@ -250,8 +251,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                         </TableCell>
                     </TableRow>
                     {expandedRowId === sale.id && (
-                        <TableRow>
-                            <TableCell colSpan={10} className={cn("p-4 bg-muted/50", hasUrgentObservation(sale.observations) && "bg-yellow-100/50")}>
+                        <TableRow className="hover:bg-muted/50">
+                            <TableCell colSpan={10} className={cn("p-4 bg-muted/50", hasUrgentObservation(sale.observations) && "bg-yellow-50")}>
                                 {sale.observations && (
                                     <div className="mb-2">
                                         <p className="font-semibold text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4" />Observação:</p>

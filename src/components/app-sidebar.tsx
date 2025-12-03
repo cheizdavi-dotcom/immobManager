@@ -7,7 +7,6 @@ import {
   Building,
   Building2,
   ChevronDown,
-  Home,
   LayoutDashboard,
   LogOut,
   TrendingUp,
@@ -76,8 +75,8 @@ export function AppSidebar() {
     <>
       <SidebarHeader>
         <div className="flex items-center gap-2">
-          <Building2 className="size-6 text-primary" />
-          <span className="text-lg font-semibold">ImmobManager</span>
+          <Building2 className="size-7" />
+          <span className="text-xl font-semibold">ImmobManager</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -103,7 +102,7 @@ export function AppSidebar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-sidebar-accent">
-              <div className="flex items-center gap-2 overflow-hidden">
+              <div className="flex items-center gap-3 overflow-hidden">
                 <Avatar className="size-8">
                   <AvatarImage src={PlaceHolderImages[0].imageUrl} alt="User" />
                   <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>

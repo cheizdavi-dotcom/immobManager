@@ -63,7 +63,7 @@ export default function EmpreendimentosPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-2xl font-semibold">Gestão de Empreendimentos</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Gestão de Empreendimentos</h1>
             <p className="text-muted-foreground">Cadastre e gerencie os imóveis disponíveis.</p>
         </div>
         <Button onClick={handleOpenNewDialog}>Novo Empreendimento</Button>
@@ -81,16 +81,16 @@ export default function EmpreendimentosPage() {
           {developments.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className='hover:bg-card'>
                   <TableHead>Nome</TableHead>
                   <TableHead>Construtora</TableHead>
                   <TableHead>Localização</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right pr-6">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {developments.map((dev) => (
-                  <TableRow key={dev.id}>
+                  <TableRow key={dev.id} className='border-x-0'>
                     <TableCell className="font-medium">{dev.name}</TableCell>
                     <TableCell>{dev.construtora}</TableCell>
                     <TableCell>{dev.localizacao}</TableCell>

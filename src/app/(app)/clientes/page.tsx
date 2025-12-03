@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cva } from 'class-variance-authority';
 
-const statusBadgeVariants = cva('capitalize font-semibold', {
+const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
   variants: {
     status: {
       Frio: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -75,7 +75,7 @@ export default function ClientesPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-2xl font-semibold">Gestão de Clientes</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Gestão de Clientes</h1>
             <p className="text-muted-foreground">Cadastre e gerencie sua carteira de clientes.</p>
         </div>
         <Button onClick={handleOpenNewDialog}>Novo Cliente</Button>
@@ -93,23 +93,23 @@ export default function ClientesPage() {
           {clients.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className='hover:bg-card'>
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>CPF</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right pr-6">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {clients.map((client) => {
                     const whatsappLink = `https://wa.me/${client.phone.replace(/\D/g, '')}`;
                     return(
-                  <TableRow key={client.id}>
+                  <TableRow key={client.id} className='border-x-0'>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>
-                         <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                            <Phone className="h-3 w-3" />
+                         <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                            <Phone className="h-4 w-4" />
                             {client.phone}
                         </a>
                     </TableCell>
