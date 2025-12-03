@@ -88,7 +88,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     control,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, dirtyFields },
     reset,
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
@@ -128,13 +128,14 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   const saleValue = watch('saleValue');
 
   useEffect(() => {
-    if (saleValue > 0) {
+    // Only suggest commission if the field hasn't been manually edited.
+    if (saleValue > 0 && !dirtyFields.commission) {
       const commissionValue = saleValue * 0.05;
       setValue('commission', commissionValue);
-    } else {
+    } else if (saleValue <= 0 && !dirtyFields.commission) {
       setValue('commission', 0);
     }
-  }, [saleValue, setValue]);
+  }, [saleValue, setValue, dirtyFields.commission]);
 
 
   const onSubmit = (data: SaleFormValues) => {
@@ -272,7 +273,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             </div>
 
              <div className="space-y-2">
-              <Label htmlFor="commission">Comissão (5%)</Label>
+              <Label htmlFor="commission">Valor da Comissão (R$)</Label>
               <Controller
                 name="commission"
                 control={control}
