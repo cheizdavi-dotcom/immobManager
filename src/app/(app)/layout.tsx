@@ -1,3 +1,4 @@
+'use client';
 import type { ReactNode } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import {
@@ -6,8 +7,29 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { useAuth } from '@/hooks/useAuth.tsx';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/auth');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading || !isAuthenticated) {
+    // You can show a loading spinner here
+    return (
+        <div className="flex h-screen w-screen items-center justify-center">
+            <p>Loading...</p>
+        </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>

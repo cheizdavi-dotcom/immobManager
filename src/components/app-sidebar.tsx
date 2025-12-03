@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/hooks/useAuth.tsx';
 
 const menuItems = [
   {
@@ -69,6 +70,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
     <>
@@ -104,22 +106,22 @@ export function AppSidebar() {
               <div className="flex items-center gap-2 overflow-hidden">
                 <Avatar className="size-8">
                   <AvatarImage src={PlaceHolderImages[0].imageUrl} alt="User" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
                 <span className="truncate text-sm font-medium">
-                  Admin User
+                  {user?.name || 'Admin'}
                 </span>
               </div>
               <ChevronDown className="size-4 shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" side="top" align="start">
-            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.email || 'Minha Conta'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
+            <DropdownMenuItem disabled>Perfil</DropdownMenuItem>
+            <DropdownMenuItem disabled>Configurações</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sair</span>
             </DropdownMenuItem>
