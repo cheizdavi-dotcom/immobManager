@@ -64,6 +64,7 @@ const saleSchema = z.object({
   }),
   commissionStatus: z.enum(['Pendente', 'Pago']).optional(),
   observations: z.string().optional(),
+  combinado: z.string().optional(),
 });
 
 type SaleFormValues = z.infer<typeof saleSchema>;
@@ -115,6 +116,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
       status: 'Pendente',
       commissionStatus: 'Pendente',
       observations: '',
+      combinado: '',
     },
   });
 
@@ -140,6 +142,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             saleDate: new Date(),
             commissionStatus: 'Pendente',
             observations: '',
+            combinado: '',
         });
         }
     }
@@ -165,6 +168,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         id: sale?.id || new Date().toISOString(),
         commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
         observations: data.observations || '',
+        combinado: data.combinado || '',
     };
     onSaleSubmit(finalData);
     toast({
@@ -363,14 +367,25 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
 
            <div className="space-y-2">
-              <Label htmlFor="observations">Observações / Combinado</Label>
+              <Label htmlFor="observations">Observações</Label>
               <Textarea
                 id="observations"
                 {...register('observations')}
-                placeholder="Ex: Cliente regularizando SPC, Aguardando esposa assinar..."
-                rows={3}
+                placeholder="Ex: Cliente regularizando SPC, aguardando esposa assinar..."
+                rows={2}
               />
               {errors.observations && <p className="text-sm text-destructive">{errors.observations.message}</p>}
+            </div>
+
+             <div className="space-y-2">
+              <Label htmlFor="combinado">Combinado / Próximo Passo</Label>
+              <Textarea
+                id="combinado"
+                {...register('combinado')}
+                placeholder="Ex: Entrevista dia 15; Devolver contrato assinado..."
+                rows={2}
+              />
+              {errors.combinado && <p className="text-sm text-destructive">{errors.combinado.message}</p>}
             </div>
         
           <div className="space-y-2">

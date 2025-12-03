@@ -25,4 +25,5 @@ export type Sale = {
   status: SaleStatus;
   commissionStatus: CommissionStatus;
   observations?: string;
+  combinado?: string;
 };

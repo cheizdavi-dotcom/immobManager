@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency, cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { cva } from 'class-variance-authority';
-import { Edit, Trash2, FileText, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Edit, Trash2, FileText, ArrowUpDown, ChevronDown, MessageSquare, Handshake } from 'lucide-react';
 import React, { useState } from 'react';
 import { NewSaleDialog } from './new-sale-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -130,7 +130,6 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
     );
   }
 
-
   return (
     <>
         <Card>
@@ -176,13 +175,13 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                     <TableRow 
                         className={cn(
                             hasUrgentObservation(sale.observations) && 'border-l-4 border-yellow-500',
-                            sale.observations && 'cursor-pointer'
+                            (sale.observations || sale.combinado) && 'cursor-pointer'
                         )}
-                        onClick={() => sale.observations && handleToggleRow(sale.id)}
+                        onClick={() => (sale.observations || sale.combinado) && handleToggleRow(sale.id)}
                     >
                         <TableCell>
                         <div className="flex items-center gap-2">
-                            {sale.observations && (
+                            {(sale.observations || sale.combinado) && (
                                 <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRowId === sale.id && "rotate-180")} />
                             )}
                             {format(new Date(sale.saleDate), 'dd/MM/yyyy')}
@@ -192,6 +191,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                         <TableCell>
                             <div className={cn("flex items-center gap-2", hasUrgentObservation(sale.observations) && 'font-bold text-yellow-700')}>
                                 {sale.clientName}
+                                {sale.observations && <MessageSquare className="h-4 w-4 text-blue-500" />}
+                                {sale.combinado && <Handshake className="h-4 w-4 text-green-600" />}
                             </div>
                         </TableCell>
                         <TableCell>{sale.empreendimento}</TableCell>
@@ -235,11 +236,21 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, corr
                             </AlertDialog>
                         </TableCell>
                     </TableRow>
-                    {expandedRowId === sale.id && sale.observations && (
+                    {expandedRowId === sale.id && (
                         <TableRow>
                             <TableCell colSpan={10} className={cn("p-4 bg-muted/50", hasUrgentObservation(sale.observations) && "bg-yellow-100/50")}>
-                                <p className="font-semibold text-sm">Observação:</p>
-                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{sale.observations}</p>
+                                {sale.observations && (
+                                    <div className="mb-2">
+                                        <p className="font-semibold text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4" />Observação:</p>
+                                        <p className="text-sm text-foreground/80 whitespace-pre-wrap pl-6">{sale.observations}</p>
+                                    </div>
+                                )}
+                                {sale.combinado && (
+                                     <div>
+                                        <p className="font-semibold text-sm flex items-center gap-2"><Handshake className="h-4 w-4" />Combinado:</p>
+                                        <p className="text-sm text-foreground/80 whitespace-pre-wrap pl-6">{sale.combinado}</p>
+                                    </div>
+                                )}
                             </TableCell>
                         </TableRow>
                     )}
