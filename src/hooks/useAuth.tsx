@@ -7,6 +7,9 @@ type User = {
   email: string;
 };
 
+// This type is only for internal storage and includes the password.
+type StoredUser = User & { password: string };
+
 type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
@@ -33,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('user');
+      const storedUser = localStorage.getItem('immob_current_user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
@@ -48,19 +51,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, pass: string): Promise<void> => {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
-            const storedUser = localStorage.getItem('user');
-            const storedPass = localStorage.getItem('password');
+            const usersJson = localStorage.getItem('immob_users');
+            const users: StoredUser[] = usersJson ? JSON.parse(usersJson) : [];
+            
+            const foundUser = users.find(u => u.email === email && u.password === pass);
 
-            if (storedUser) {
-                const parsedUser: User = JSON.parse(storedUser);
-                if (parsedUser.email === email && storedPass === pass) {
-                    setUser(parsedUser);
-                    resolve();
-                } else {
-                    reject(new Error('E-mail ou senha inválidos.'));
-                }
+            if (foundUser) {
+                const userToSave: User = { name: foundUser.name, email: foundUser.email };
+                localStorage.setItem('immob_current_user', JSON.stringify(userToSave));
+                setUser(userToSave);
+                resolve();
             } else {
-                 reject(new Error('Nenhum usuário cadastrado com este e-mail.'));
+                reject(new Error('E-mail ou senha inválidos.'));
             }
         }, 500);
     });
@@ -69,24 +71,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, pass: string): Promise<void> => {
      return new Promise((resolve, reject) => {
          setTimeout(() => {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-                const parsedUser: User = JSON.parse(storedUser);
-                if(parsedUser.email === email) {
-                    return reject(new Error('Este e-mail já está em uso.'));
-                }
+            const usersJson = localStorage.getItem('immob_users');
+            const users: StoredUser[] = usersJson ? JSON.parse(usersJson) : [];
+
+            if (users.some(u => u.email === email)) {
+                return reject(new Error('Este e-mail já está em uso.'));
             }
-            const newUser: User = { name, email };
-            localStorage.setItem('user', JSON.stringify(newUser));
-            localStorage.setItem('password', pass);
+            
+            const newUser: StoredUser = { name, email, password: pass };
+            users.push(newUser);
+            localStorage.setItem('immob_users', JSON.stringify(users));
             resolve();
          }, 500)
      });
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('password');
+    localStorage.removeItem('immob_current_user');
     setUser(null);
     router.push('/auth');
   };

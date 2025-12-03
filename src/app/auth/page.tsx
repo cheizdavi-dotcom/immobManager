@@ -67,7 +67,9 @@ export default function AuthPage() {
         title: 'Cadastro realizado com sucesso!',
         description: 'Você já pode fazer o login.',
       });
+      loginForm.setValue('email', values.email); // Pre-fill email on login form
       setIsLogin(true);
+      registerForm.reset();
     } catch (error: any) {
       toast({
         variant: 'destructive',
