@@ -1,5 +1,5 @@
 'use client';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Defs, LinearGradient, Stop } from 'recharts';
 import {
   Card,
   CardContent,
@@ -27,13 +27,31 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
   const chartConfig = {
     total: {
       label: 'Vendido',
-      color: 'hsl(var(--primary))',
+      color: 'hsl(var(--chart-1))',
     },
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid grid-cols-1 gap-1">
+            <div className="flex flex-col space-y-1">
+              <span className="text-sm font-bold text-foreground">{label}</span>
+              <span className="text-sm text-muted-foreground">
+                Total: <span className="font-mono font-medium tabular-nums text-foreground">{formatCurrency(payload[0].value)}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   if (data.length === 0) {
     return (
-         <Card className="lg:col-span-3">
+         <Card>
             <CardHeader>
                  <div className="flex items-center gap-2">
                     <Users className="h-6 w-6" />
@@ -62,8 +80,14 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
       <CardContent>
         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30 }}>
-                <CartesianGrid horizontal={false} />
+            <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30 }} barCategoryGap="20%">
+              <Defs>
+                <LinearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.8}/>
+                  <Stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.1}/>
+                </LinearGradient>
+              </Defs>
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" />
               <YAxis
                 dataKey="name"
                 type="category"
@@ -86,11 +110,9 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
               />
                <Tooltip
                 cursor={{ fill: "hsl(var(--muted))" }}
-                content={<ChartTooltipContent
-                  formatter={(value) => formatCurrency(value as number)}
-                />}
+                content={<CustomTooltip />}
               />
-              <Bar dataKey="total" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="total" fill="url(#barGradient)" radius={[0, 4, 4, 0]} isAnimationActive={true}/>
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
@@ -98,5 +120,3 @@ export function BrokerRankingChart({ data }: BrokerRankingChartProps) {
     </Card>
   );
 }
-
-    

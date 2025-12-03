@@ -88,8 +88,10 @@ export function BuilderMixChart({ data }: BuilderMixChartProps) {
                 data={data}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={60}
+                innerRadius={80}
+                outerRadius={110}
                 strokeWidth={5}
+                isAnimationActive={true}
               >
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -100,11 +102,11 @@ export function BuilderMixChart({ data }: BuilderMixChartProps) {
         </ChartContainer>
       </CardContent>
        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 p-4 text-sm text-muted-foreground">
-        {data.map((item) => (
+        {data.map((item, index) => (
           <div key={item.name} className="flex items-center gap-1.5">
             <div
               className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: chartConfig[item.name]?.color }}
+              style={{ backgroundColor: COLORS[index % COLORS.length] }}
             />
             {item.name}
           </div>
