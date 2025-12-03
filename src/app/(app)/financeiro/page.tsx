@@ -44,28 +44,28 @@ export default function FinanceiroPage() {
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {
-        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
+        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         
-        const faturamentoTotal = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
+        const vgvTotalGeral = activeSales.reduce((acc, s) => acc + s.saleValue, 0);
         
-        const comissoesPagas = completedSales
+        const comissoesPagas = activeSales
             .filter(s => s.commissionStatus === 'Pago')
-            .reduce((acc, s) => acc + (s.commission || 0), 0);
+            .reduce((acc, s) => acc + s.commission, 0);
 
-        const comissoesPendentes = sales
-            .filter(s => s.status === 'Venda Concluída / Paga' && s.commissionStatus === 'Pendente')
-            .reduce((acc, s) => acc + (s.commission || 0), 0);
+        const comissoesAPagar = activeSales
+            .filter(s => s.commissionStatus === 'Pendente')
+            .reduce((acc, s) => acc + s.commission, 0);
         
-        const lucroBruto = faturamentoTotal - comissoesPagas - comissoesPendentes;
+        const lucroBrutoPotencial = vgvTotalGeral - comissoesPagas - comissoesAPagar;
         
-        return { faturamentoTotal, comissoesPagas, comissoesPendentes, lucroBruto };
+        return { vgvTotalGeral, comissoesPagas, comissoesAPagar, lucroBrutoPotencial };
     }, [sales]);
 
-    const { faturamentoTotal, comissoesPagas, comissoesPendentes, lucroBruto } = financialMetrics;
+    const { vgvTotalGeral, comissoesPagas, comissoesAPagar, lucroBrutoPotencial } = financialMetrics;
 
     const commissionsToDisplay = useMemo(() => {
         return sales
-            .filter(s => s.commission > 0)
+            .filter(s => s.commission > 0 && s.status !== 'Venda Cancelada / Caiu')
             .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
     }, [sales]);
 
@@ -124,8 +124,8 @@ export default function FinanceiroPage() {
         </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
             <KpiCard
-                title="Faturamento (Vendas Pagas)"
-                value={formatCurrency(faturamentoTotal)}
+                title="VGV Total (Geral)"
+                value={formatCurrency(vgvTotalGeral)}
                 icon={<DollarSign />}
             />
             <KpiCard
@@ -134,13 +134,13 @@ export default function FinanceiroPage() {
                 icon={<CheckCircle className="text-green-500" />}
             />
             <KpiCard
-                title="Comissões Pendentes"
-                value={formatCurrency(comissoesPendentes)}
+                title="Comissões a Pagar"
+                value={formatCurrency(comissoesAPagar)}
                 icon={<Clock className="text-yellow-500" />}
             />
              <KpiCard
-                title="Lucro Bruto (A Receber)"
-                value={formatCurrency(lucroBruto)}
+                title="Lucro Bruto (Potencial)"
+                value={formatCurrency(lucroBrutoPotencial)}
                 icon={<TrendingUp />}
             />
       </div>
