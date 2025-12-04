@@ -30,8 +30,8 @@ export default function DashboardPage() {
         comissoesPendentes,
         conversionRate,
     } = useMemo(() => {
-        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
-        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
+        const activeSales = sales?.filter(s => s.status !== 'Venda Cancelada / Caiu') || [];
+        const completedSales = sales?.filter(s => s.status === 'Venda Concluída / Paga') || [];
         
         const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
@@ -44,14 +44,14 @@ export default function DashboardPage() {
             .filter(s => s.commissionStatus === 'Pendente')
             .reduce((acc, s) => acc + (s.commission || 0), 0);
         
-        const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
+        const totalClosedDeals = sales?.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length || 0;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
 
         return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate };
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {
-        if (sales.length === 0 || corretores.length === 0) return [];
+        if (!sales || sales.length === 0 || !corretores || corretores.length === 0) return [];
         const salesByBroker = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
@@ -77,7 +77,7 @@ export default function DashboardPage() {
     }, [sales, corretores]);
 
     const builderMixData = useMemo(() => {
-        if (sales.length === 0) return [];
+        if (!sales || sales.length === 0) return [];
 
         const salesByBuilder = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
@@ -94,6 +94,7 @@ export default function DashboardPage() {
     }, [sales]);
 
     const attentionSales = useMemo(() => {
+        if (!sales) return [];
         const sevenDaysAgo = subDays(new Date(), 7);
         return sales.filter(sale => 
             (sale.status === 'Análise de Crédito / SPC' || sale.status === 'Aguardando Assinatura' || sale.status === 'Aguardando Pagamento Ato') &&
@@ -102,6 +103,7 @@ export default function DashboardPage() {
     }, [sales]);
 
      const corretoresMap = useMemo(() => {
+        if (!corretores) return {};
         return corretores.reduce((acc, corretor) => {
             acc[corretor.id] = corretor;
             return acc;
@@ -109,6 +111,7 @@ export default function DashboardPage() {
     }, [corretores]);
 
     const clientsMap = useMemo(() => {
+        if (!clients) return {};
         return clients.reduce((acc, client) => {
             acc[client.id] = client;
             return acc;
@@ -116,6 +119,7 @@ export default function DashboardPage() {
     }, [clients]);
 
      const developmentsMap = useMemo(() => {
+        if (!developments) return {};
         return developments.reduce((acc, dev) => {
             acc[dev.id] = dev;
             return acc;
@@ -123,7 +127,7 @@ export default function DashboardPage() {
     }, [developments]);
 
 
-    if (sales.length === 0 && clients.length === 0) {
+    if (!sales || sales.length === 0 && (!clients || clients.length === 0)) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
                  <div className="flex flex-col items-center gap-2">
@@ -174,7 +178,7 @@ export default function DashboardPage() {
                     <BuilderMixChart data={builderMixData} />
                 </div>
                 <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-8">
-                     <AgendaWidget sales={sales} clientsMap={clientsMap} />
+                     <AgendaWidget sales={sales || []} clientsMap={clientsMap} />
                      <AttentionList sales={attentionSales} corretoresMap={corretoresMap} clientsMap={clientsMap} developmentsMap={developmentsMap} />
                 </div>
             </div>

@@ -48,7 +48,7 @@ export default function FinanceiroPage() {
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {
-        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
+        const activeSales = sales?.filter(s => s.status !== 'Venda Cancelada / Caiu') || [];
         
         const vgvTotalGeral = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
@@ -73,20 +73,21 @@ export default function FinanceiroPage() {
     const { vgvTotalGeral, comissoesPagas, comissoesAPagar, lucroBrutoPotencial } = financialMetrics;
 
     const commissionsToDisplay = useMemo(() => {
+        if (!sales) return [];
         return sales
-            .filter(s => s.commission > 0 && s.status !== 'Venda Cancelada / Caiu')
+            .filter(s => (s.commission || 0) > 0 && s.status !== 'Venda Cancelada / Caiu')
             .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
     }, [sales]);
 
     const getCorretorName = (corretorId: string) => {
-        return corretores.find(c => c.id === corretorId)?.name || 'N/A';
+        return corretores?.find(c => c.id === corretorId)?.name || 'N/A';
     }
     const getClientName = (clientId: string) => {
-        return clients.find(c => c.id === clientId)?.name || 'N/A';
+        return clients?.find(c => c.id === clientId)?.name || 'N/A';
     }
 
     const toggleCommissionStatus = (saleId: string, currentStatus: CommissionStatus) => {
-        const sale = sales.find(s => s.id === saleId);
+        const sale = sales?.find(s => s.id === saleId);
         if (sale?.status === 'Venda Cancelada / Caiu') {
              toast({
                 variant: "destructive",
@@ -109,7 +110,7 @@ export default function FinanceiroPage() {
     };
 
 
-    if (sales.length === 0) {
+    if (!sales || sales.length === 0) {
         return (
         <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
             <div className="flex flex-col items-center gap-2">
@@ -180,7 +181,7 @@ export default function FinanceiroPage() {
                             <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{getCorretorName(sale.corretorId)}</TableCell>
                             <TableCell>
-                                <div className="font-medium">{developments.find(d => d.id === sale.developmentId)?.name || 'N/A'}</div>
+                                <div className="font-medium">{developments?.find(d => d.id === sale.developmentId)?.name || 'N/A'}</div>
                                 <div className={cn("text-sm", sale.status !== 'Venda Cancelada / Caiu' ? "text-muted-foreground" : "text-inherit")}>{getClientName(sale.clientId)}</div>
                             </TableCell>
                             <TableCell>

@@ -36,23 +36,25 @@ export default function VendasPage() {
 
   const addOrUpdateSale = (sale: Sale) => {
     setSalesData((prevSales) => {
-      const existingSaleIndex = prevSales.findIndex((s) => s.id === sale.id);
+      const sales = prevSales || [];
+      const existingSaleIndex = sales.findIndex((s) => s.id === sale.id);
       if (existingSaleIndex > -1) {
-        const updatedSales = [...prevSales];
+        const updatedSales = [...sales];
         updatedSales[existingSaleIndex] = sale;
         return updatedSales;
       } else {
-        return [...prevSales, sale];
+        return [...sales, sale];
       }
     });
   };
 
   const deleteSale = (saleId: string) => {
-    setSalesData((prevSales) => prevSales.filter((s) => s.id !== saleId));
+    setSalesData((prevSales) => (prevSales || []).filter((s) => s.id !== saleId));
   };
 
 
   const clientsMap = useMemo(() => {
+    if (!clientsData) return {};
     return clientsData.reduce((acc, client) => {
         acc[client.id] = client;
         return acc;
@@ -60,41 +62,52 @@ export default function VendasPage() {
   }, [clientsData]);
 
   const developmentsMap = useMemo(() => {
+    if (!developmentsData) return {};
     return developmentsData.reduce((acc, dev) => {
         acc[dev.id] = dev;
         return acc;
     }, {} as Record<string, Development>);
   }, [developmentsData]);
 
-  const filteredSales = useMemo(() => salesData.filter((sale) => {
-    const saleDate = new Date(sale.saleDate);
-    const saleMonth = getMonth(saleDate);
-    const saleYear = getYear(saleDate);
+  const filteredSales = useMemo(() => {
+    if (!salesData) return [];
+    return salesData.filter((sale) => {
+        const saleDate = new Date(sale.saleDate);
+        const saleMonth = getMonth(saleDate);
+        const saleYear = getYear(saleDate);
 
-    const clientName = clientsMap[sale.clientId]?.name || '';
-    const clientNameMatch = clientName
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    
-    const construtoraMatch = construtoraFilter === 'all' || (sale.construtora && sale.construtora.toLowerCase() === construtoraFilter.toLowerCase());
+        const clientName = clientsMap[sale.clientId]?.name || '';
+        const clientNameMatch = clientName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+        
+        const construtoraMatch = construtoraFilter === 'all' || (sale.construtora && sale.construtora.toLowerCase() === construtoraFilter.toLowerCase());
 
-    const monthMatch =
-      monthFilter === 'all' || saleMonth === parseInt(monthFilter);
+        const monthMatch =
+        monthFilter === 'all' || saleMonth === parseInt(monthFilter);
 
-    const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
+        const yearMatch = yearFilter === 'all' || saleYear === parseInt(yearFilter);
 
-    return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
-  }), [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap]);
+        return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
+    })
+  }, [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap]);
 
-  const uniqueYears = useMemo(() => Array.from(
-    new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
-  ).sort((a,b) => b - a), [salesData]);
+  const uniqueYears = useMemo(() => {
+    if (!salesData) return [];
+    return Array.from(
+        new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
+    ).sort((a,b) => b - a)
+  }, [salesData]);
 
-  const uniqueConstrutoras = useMemo(() => Array.from(
-    new Set(salesData.map((dev) => dev.construtora).filter(Boolean))
-  ).sort(), [salesData]);
+  const uniqueConstrutoras = useMemo(() => {
+    if (!salesData) return [];
+    return Array.from(
+        new Set(salesData.map((dev) => dev.construtora).filter(Boolean))
+  ).sort()
+}, [salesData]);
 
   const corretoresMap = useMemo(() => {
+    if (!corretoresData) return {};
     return corretoresData.reduce((acc, corretor) => {
         acc[corretor.id] = corretor;
         return acc;

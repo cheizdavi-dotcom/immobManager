@@ -29,7 +29,7 @@ import { CalendarIcon, PlusCircle, Percent } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, parseCurrency } from '@/lib/utils';
 import { ALL_STATUSES, type Sale, type Corretor, type Client, type Development } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
@@ -89,11 +89,14 @@ const CurrencyInput = ({ value, onChange }: { value: number, onChange: (value: n
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value.replace(/\D/g, '');
-        const numericValue = parseInt(rawValue, 10) || 0;
-        onChange(numericValue / 100);
-        setDisplayValue(formatCurrency(numericValue / 100));
+        const numericValue = parseCurrency(e.target.value);
+        onChange(numericValue);
+        setDisplayValue(formatCurrency(numericValue));
     };
+
+    const handleBlur = () => {
+        setDisplayValue(formatCurrency(value));
+    }
 
     return (
         <Input
@@ -102,6 +105,7 @@ const CurrencyInput = ({ value, onChange }: { value: number, onChange: (value: n
             placeholder="R$ 0,00"
             value={displayValue}
             onChange={handleChange}
+            onBlur={handleBlur}
         />
     );
 };
@@ -278,7 +282,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                             <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                           {corretores.length > 0 ? corretores.map((c) => (
+                           {corretores && corretores.length > 0 ? corretores.map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                             )) : <SelectItem value="none" disabled>Nenhum corretor cadastrado</SelectItem>}
                         </SelectContent>

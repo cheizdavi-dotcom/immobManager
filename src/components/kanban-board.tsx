@@ -13,14 +13,14 @@ type KanbanBoardProps = {
   developmentsMap: Record<string, Development>;
   corretores: Corretor[];
   clients: Client[];
-  setClients: (clients: Client[]) => void;
+  setClients: (clients: Client[] | ((prev: Client[])=> Client[])) => void;
   developments: Development[];
-  setDevelopments: (developments: Development[]) => void;
+  setDevelopments: (developments: Development[]| ((prev: Development[])=> Development[])) => void;
 };
 
 export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap, clientsMap, developmentsMap, corretores, clients, setClients, developments, setDevelopments }: KanbanBoardProps) {
 
-    if (sales.length === 0) {
+    if (!sales || sales.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg border-2 border-dashed border-muted-foreground/20 py-20">
           <FileText className="h-16 w-16 text-muted-foreground" />

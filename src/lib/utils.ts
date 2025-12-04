@@ -14,10 +14,11 @@ export function formatCurrency(amount: number | null | undefined) {
   }).format(value);
 }
 
-export function parseCurrency(value: string): number {
+export function parseCurrency(value: string | number): number {
+    if (typeof value === 'number') return value;
     if (!value) return 0;
-    const numberString = value.replace(/R\$\s?/, '').replace(/\./g, '').replace(',', '.');
-    const number = parseFloat(numberString);
+    const numberString = value.replace(/\D/g, '');
+    const number = parseFloat(numberString) / 100;
     return isNaN(number) ? 0 : number;
 }
 

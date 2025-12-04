@@ -87,36 +87,39 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
     setExpandedRowId(prevId => (prevId === saleId ? null : saleId));
   };
 
-  const sortedSales = [...sales].sort((a, b) => {
-    let aValue, bValue;
+  const sortedSales = React.useMemo(() => {
+    if (!sales) return [];
+    return [...sales].sort((a, b) => {
+        let aValue, bValue;
 
-    if (sortKey === 'corretorName') {
-      aValue = corretoresMap[a.corretorId]?.name || '';
-      bValue = corretoresMap[b.corretorId]?.name || '';
-    } else if (sortKey === 'clientName') {
-      aValue = clientsMap[a.clientId]?.name || '';
-      bValue = clientsMap[b.clientId]?.name || '';
-    } else {
-      aValue = a[sortKey as keyof Sale];
-      bValue = b[sortKey as keyof Sale];
-    }
-    
-    if (sortKey === 'saleDate') {
-        const aDate = new Date(aValue as string | number | Date).getTime();
-        const bDate = new Date(bValue as string | number | Date).getTime();
-        if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
-        if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
+        if (sortKey === 'corretorName') {
+        aValue = corretoresMap[a.corretorId]?.name || '';
+        bValue = corretoresMap[b.corretorId]?.name || '';
+        } else if (sortKey === 'clientName') {
+        aValue = clientsMap[a.clientId]?.name || '';
+        bValue = clientsMap[b.clientId]?.name || '';
+        } else {
+        aValue = a[sortKey as keyof Sale];
+        bValue = b[sortKey as keyof Sale];
+        }
+        
+        if (sortKey === 'saleDate') {
+            const aDate = new Date(aValue as string | number | Date).getTime();
+            const bDate = new Date(bValue as string | number | Date).getTime();
+            if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
+            if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        }
+
+        if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+        }
         return 0;
-    }
-
-    if (aValue < bValue) {
-      return sortDirection === 'asc' ? -1 : 1;
-    }
-    if (aValue > bValue) {
-      return sortDirection === 'asc' ? 1 : -1;
-    }
-    return 0;
-  });
+    });
+  }, [sales, sortKey, sortDirection, corretoresMap, clientsMap]);
   
   const hasUrgentObservation = (observation?: string) => {
       if (!observation) return false;
@@ -124,7 +127,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
       return urgentWords.some(word => observation.toLowerCase().includes(word));
   }
 
-  if (sales.length === 0) {
+  if (!sales || sales.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg border-2 border-dashed border-muted-foreground/20 py-20">
           <FileText className="h-16 w-16 text-muted-foreground" />
