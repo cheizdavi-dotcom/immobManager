@@ -31,19 +31,19 @@ export default function DashboardPage() {
         conversionRate,
         atosMesAtual,
     } = useMemo(() => {
-        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
+        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
         const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
-        const comissoesPagas = completedSales
+        const comissoesPagas = activeSales
             .filter(s => s.commissionStatus === 'Pago')
             .reduce((acc, s) => acc + (s.commission || 0), 0);
 
         const comissoesPendentes = activeSales
             .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc_1, s_1) => acc_1 + (s_1.commission || 0), 0);
+            .reduce((acc, s_1) => acc_1 + (s_1.commission || 0), 0);
         
         const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
