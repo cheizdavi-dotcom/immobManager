@@ -29,7 +29,6 @@ export default function DashboardPage() {
         comissoesPagas,
         comissoesPendentes,
         conversionRate,
-        atosMesAtual,
     } = useMemo(() => {
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
@@ -43,22 +42,12 @@ export default function DashboardPage() {
 
         const comissoesPendentes = activeSales
             .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc, s_1) => acc_1 + (s_1.commission || 0), 0);
+            .reduce((acc, s) => acc + (s.commission || 0), 0);
         
         const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
 
-        const today = new Date();
-        const start = startOfMonth(today);
-        const end = endOfMonth(today);
-
-        const atosMesAtual = sales.filter(s => {
-            if (!s.saleDate) return false;
-            const saleDate = new Date(s.saleDate);
-            return isWithinInterval(saleDate, { start, end });
-        }).reduce((acc, s) => acc + (s.atoValue || 0), 0);
-
-        return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate, atosMesAtual };
+        return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate };
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {

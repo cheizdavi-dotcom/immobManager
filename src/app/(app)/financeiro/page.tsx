@@ -50,17 +50,22 @@ export default function FinanceiroPage() {
     const financialMetrics = useMemo(() => {
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         
-        const vgvTotalGeral = activeSales.reduce((acc, s) => acc + s.saleValue, 0);
+        const vgvTotalGeral = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
         const comissoesPagas = activeSales
             .filter(s => s.commissionStatus === 'Pago')
-            .reduce((acc, s) => acc + s.commission, 0);
+            .reduce((acc, s) => acc + (s.commission || 0), 0);
 
         const comissoesAPagar = activeSales
             .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc, s) => acc + s.commission, 0);
+            .reduce((acc, s) => acc + (s.commission || 0), 0);
         
-        const lucroBrutoPotencial = vgvTotalGeral - comissoesPagas - comissoesAPagar;
+        const lucroBrutoPotencial = activeSales.reduce((acc, s) => {
+            const saleValue = s.saleValue || 0;
+            const commissionValue = s.commission || 0;
+            return acc + (saleValue - commissionValue);
+        }, 0);
+
         
         return { vgvTotalGeral, comissoesPagas, comissoesAPagar, lucroBrutoPotencial };
     }, [sales]);
