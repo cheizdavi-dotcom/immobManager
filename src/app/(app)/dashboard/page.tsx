@@ -31,8 +31,8 @@ export default function DashboardPage() {
         conversionRate,
         atosMesAtual,
     } = useMemo(() => {
-        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
+        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         
         const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
@@ -108,7 +108,7 @@ export default function DashboardPage() {
         const sevenDaysAgo = subDays(new Date(), 7);
         return sales.filter(sale => 
             (sale.status === 'Análise de Crédito / SPC' || sale.status === 'Aguardando Assinatura' || sale.status === 'Aguardando Pagamento Ato') &&
-            isAfter(new Date(sale.saleDate), sevenDaysAgo)
+            sale.saleDate && new Date(sale.saleDate) < sevenDaysAgo
         );
     }, [sales]);
 
