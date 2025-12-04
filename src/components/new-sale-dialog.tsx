@@ -29,7 +29,7 @@ import { CalendarIcon, PlusCircle, Percent } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { cn, formatCurrency, parseCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { ALL_STATUSES, type Sale, type Corretor, type Client, type Development } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
@@ -63,13 +63,6 @@ const saleSchema = z.object({
 
 type SaleFormValues = z.infer<typeof saleSchema>;
 
-const formatCurrencyForInput = (value: number | undefined | string) => {
-    if (value === undefined || value === null || value === '') return '';
-    const num = typeof value === 'string' ? parseCurrency(value) : value;
-    if (isNaN(num)) return '';
-    return formatCurrency(num);
-};
-
 const formatPercentageForInput = (value: number | undefined | null) => {
     if (value === undefined || value === null) return '';
     return String(value);
@@ -87,6 +80,31 @@ type NewSaleDialogProps = {
     developments: Development[];
     setDevelopments: (developments: Development[] | ((d: Development[]) => Development[])) => void;
 }
+
+const CurrencyInput = ({ value, onChange }: { value: number, onChange: (value: number) => void }) => {
+    const [displayValue, setDisplayValue] = useState(formatCurrency(value));
+
+    useEffect(() => {
+        setDisplayValue(formatCurrency(value));
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        const numericValue = parseInt(rawValue, 10) || 0;
+        onChange(numericValue / 100);
+        setDisplayValue(formatCurrency(numericValue / 100));
+    };
+
+    return (
+        <Input
+            type="text"
+            inputMode="numeric"
+            placeholder="R$ 0,00"
+            value={displayValue}
+            onChange={handleChange}
+        />
+    );
+};
 
 export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, setClients, developments, setDevelopments }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -337,17 +355,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="saleValue"
                     control={control}
-                    render={({ field: { onChange, value, ...rest} }) => (
-                    <Input
-                        {...rest}
-                        placeholder="R$ 0,00"
-                        value={formatCurrency(value)}
-                        onChange={(e) => {
-                            const parsedValue = parseCurrency(e.target.value);
-                            onChange(parsedValue);
-                        }}
-                    />
-                    )}
+                    render={({ field }) => <CurrencyInput {...field} />}
                 />
                 {errors.saleValue && <p className="text-sm text-destructive">{errors.saleValue.message}</p>}
                 </div>
@@ -356,17 +364,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="atoValue"
                     control={control}
-                    render={({ field: { onChange, value, ...rest} }) => (
-                    <Input
-                        {...rest}
-                        placeholder="R$ 0,00"
-                        value={formatCurrency(value)}
-                        onChange={(e) => {
-                            const parsedValue = parseCurrency(e.target.value);
-                            onChange(parsedValue);
-                        }}
-                    />
-                    )}
+                    render={({ field }) => <CurrencyInput {...field} />}
                 />
                 {errors.atoValue && <p className="text-sm text-destructive">{errors.atoValue.message}</p>}
                 </div>
@@ -376,22 +374,11 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           <div className="grid grid-cols-[1fr_100px] gap-4 items-end">
              <div className="space-y-2">
               <Label htmlFor="commission">Valor da Comissão (R$)</Label>
-              <Controller
-                name="commission"
-                control={control}
-                render={({ field: { onChange, value, ...rest} }) => (
-                  <Input
-                    {...rest}
-                    placeholder="R$ 0,00"
-                    className="font-semibold"
-                    value={formatCurrency(value)}
-                    onChange={(e) => {
-                        const parsedValue = parseCurrency(e.target.value);
-                        onChange(parsedValue);
-                    }}
-                  />
-                )}
-              />
+                <Controller
+                    name="commission"
+                    control={control}
+                    render={({ field }) => <CurrencyInput {...field} />}
+                />
               {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
             </div>
 

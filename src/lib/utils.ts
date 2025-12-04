@@ -7,16 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number | null | undefined) {
-  if (typeof amount !== 'number') {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(0);
-  }
+  const value = typeof amount === 'number' ? amount : 0;
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(amount);
+  }).format(value);
 }
 
 export function parseCurrency(value: string): number {
