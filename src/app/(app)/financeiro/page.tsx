@@ -1,20 +1,17 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiCard } from '@/components/kpi-card';
-import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
+import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, CommissionStatus, Client, Development, User } from '@/lib/types';
+import { sales as initialSalesData, corretores as initialCorretoresData, clients, developments } from '@/lib/data';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { getSales, updateSale } from '../vendas/actions';
-import { getCorretores } from '../corretores/actions';
-import { getClients } from '../clientes/actions';
-import { getDevelopments } from '../empreendimentos/actions';
+import { useMemo, useState } from 'react';
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
   variants: {
@@ -40,45 +37,13 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 
 export default function FinanceiroPage() {
     const [user] = useLocalStorage<User | null>('user', null);
-    const [sales, setSales] = useState<Sale[]>([]);
-    const [corretores, setCorretores] = useState<Corretor[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [developments, setDevelopments] = useState<Development[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [sales, setSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+    const [corretores] = useLocalStorage<Corretor[]>('corretores', initialCorretoresData);
+    const [clientsData] = useLocalStorage<Client[]>('clients', clients);
+    const [developmentsData] = useLocalStorage<Development[]>('developments', developments);
     const { toast } = useToast();
 
-    const fetchData = useCallback(async () => {
-        if (!user?.id) {
-            setIsLoading(false);
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const [salesData, corretoresData, clientsData, developmentsData] = await Promise.all([
-                getSales(user.id),
-                getCorretores(user.id),
-                getClients(user.id),
-                getDevelopments(user.id),
-            ]);
-            setSales(salesData);
-            setCorretores(corretoresData);
-            setClients(clientsData);
-            setDevelopments(developmentsData);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Erro ao carregar dados financeiros', description: error.message });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [user?.id, toast]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-
     const financialMetrics = useMemo(() => {
-        if (!sales) return { vgvTotalGeral: 0, comissoesPagas: 0, comissoesAPagar: 0, lucroBrutoPotencial: 0 };
-
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         
         const vgvTotalGeral = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
@@ -99,55 +64,42 @@ export default function FinanceiroPage() {
     const { vgvTotalGeral, comissoesPagas, comissoesAPagar, lucroBrutoPotencial } = financialMetrics;
 
     const commissionsToDisplay = useMemo(() => {
-        if (!sales) return [];
         return sales
             .filter(s => (s.commission || 0) > 0 && s.status !== 'Venda Cancelada / Caiu')
             .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
     }, [sales]);
 
     const corretoresMap = useMemo(() => corretores.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [corretores]);
-    const clientsMap = useMemo(() => clients.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [clients]);
-    const developmentsMap = useMemo(() => developments.reduce((acc, d) => ({ ...acc, [d.id]: d.name }), {} as Record<string, string>), [developments]);
+    const clientsMap = useMemo(() => clientsData.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [clientsData]);
+    const developmentsMap = useMemo(() => developmentsData.reduce((acc, d) => ({ ...acc, [d.id]: d.name }), {} as Record<string, string>), [developmentsData]);
 
-    const toggleCommissionStatus = async (sale: Sale) => {
-        if (!user?.id) return;
-        if (sale.status === 'Venda Cancelada / Caiu') {
-            toast({
-                variant: "destructive",
-                title: "Ação Bloqueada",
-                description: `Não é possível pagar comissão de uma venda cancelada.`
-            });
-            return;
-        }
+    const toggleCommissionStatus = (saleId: string) => {
+        setSales(prevSales => {
+            const saleToUpdate = prevSales.find(s => s.id === saleId);
+            if (!saleToUpdate) return prevSales;
 
-        const newStatus: CommissionStatus = sale.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
-        const optimisticUpdatedSales = sales.map(s => s.id === sale.id ? { ...s, commissionStatus: newStatus } : s);
-        setSales(optimisticUpdatedSales);
+            if (saleToUpdate.status === 'Venda Cancelada / Caiu') {
+                toast({
+                    variant: "destructive",
+                    title: "Ação Bloqueada",
+                    description: `Não é possível pagar comissão de uma venda cancelada.`
+                });
+                return prevSales;
+            }
 
-        try {
-            await updateSale({ ...sale, commissionStatus: newStatus }, user.id);
+            const newStatus: CommissionStatus = saleToUpdate.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
+            
              toast({
                 title: "Status da Comissão Alterado!",
-                description: `A comissão foi marcada como ${newStatus.toLowerCase()}.`
+                description: `A comissão de ${corretoresMap[saleToUpdate.corretorId]} foi marcada como ${newStatus.toLowerCase()}.`
             });
-             await fetchData();
-        } catch (error: any) {
-            setSales(sales); // Revert on error
-            toast({ variant: 'destructive', title: 'Erro ao atualizar status.', description: error.message });
-        }
+            
+            return prevSales.map(s => s.id === saleId ? { ...s, commissionStatus: newStatus } : s);
+        });
     };
 
 
     const renderContent = () => {
-        if (isLoading) {
-            return (
-                <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-muted-foreground">Carregando dados financeiros...</p>
-                </div>
-            )
-        }
-
         if (sales.length === 0) {
             return (
                 <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
@@ -199,7 +151,7 @@ export default function FinanceiroPage() {
                                     <TableCell className="text-center">
                                         <Badge 
                                             className={commissionStatusBadgeVariants({status: sale.commissionStatus})}
-                                            onClick={() => toggleCommissionStatus(sale)}
+                                            onClick={() => toggleCommissionStatus(sale.id)}
                                         >
                                             {sale.commissionStatus}
                                         </Badge>

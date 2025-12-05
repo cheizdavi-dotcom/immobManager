@@ -1,56 +1,28 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Users, Phone, List, Trash2, Loader2, DollarSign, TrendingUp } from 'lucide-react';
+import { Users, Phone, List, Trash2, DollarSign, TrendingUp } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { NewCorretorDialog } from '@/components/new-corretor-dialog';
 import type { Corretor, Sale, User } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { sales as initialSalesData } from '@/lib/data';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getCorretores, addOrUpdateCorretor as addOrUpdateCorretorAction, deleteCorretor as deleteCorretorAction } from './actions';
-import { getSales } from '../vendas/actions';
 
 
 export default function CorretoresPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [corretores, setCorretores] = useState<Corretor[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', []);
+  const [sales] = useLocalStorage<Sale[]>('sales', initialSalesData);
   const [editingCorretor, setEditingCorretor] = useState<Corretor | null>(null);
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [selectedCorretor, setSelectedCorretor] = useState<Corretor | null>(null);
   const { toast } = useToast();
-
-  const fetchData = useCallback(async () => {
-    if (!user?.id) {
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const [corretoresData, salesData] = await Promise.all([
-        getCorretores(user.id),
-        getSales(user.id),
-      ]);
-      setCorretores(corretoresData);
-      setSales(salesData);
-    } catch (err: any) {
-      console.error(err);
-      toast({ variant: 'destructive', title: 'Erro ao buscar dados.', description: err.message });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, toast]);
-  
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
 
   const handleAddOrUpdateCorretor = async (corretorData: Omit<Corretor, 'id' | 'userId'>, id?: string) => {
@@ -60,8 +32,15 @@ export default function CorretoresPage() {
     }
     
     try {
-        const savedCorretor = await addOrUpdateCorretorAction(corretorData, user.id, id);
-        await fetchData(); // Re-fetch all data
+        let savedCorretor: Corretor;
+        if (id) {
+            savedCorretor = { ...corretorData, id, userId: user.id };
+            setCorretores(prev => prev.map(c => c.id === id ? savedCorretor : c));
+        } else {
+            savedCorretor = { ...corretorData, id: crypto.randomUUID(), userId: user.id };
+            setCorretores(prev => [...prev, savedCorretor]);
+        }
+        
         toast({
             title: id ? 'Corretor Atualizado!' : 'Corretor Cadastrado!',
             description: `${savedCorretor.name} foi salvo com sucesso.`,
@@ -73,22 +52,22 @@ export default function CorretoresPage() {
     }
   };
 
-  const handleDeleteCorretor = async (corretorId: string) => {
-    if (!user?.id) {
-        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
+  const handleDeleteCorretor = (corretorId: string) => {
+    const corretorHasSales = sales.some(sale => sale.corretorId === corretorId);
+    if(corretorHasSales) {
+        toast({
+            variant: "destructive",
+            title: "Ação Bloqueada",
+            description: "Não é possível excluir um corretor que já possui vendas registradas.",
+        });
         return;
     }
 
-    try {
-        await deleteCorretorAction(corretorId, user.id);
-        await fetchData(); // Re-fetch all data
-        toast({
-            title: 'Corretor Excluído!',
-            description: 'O corretor foi removido da sua equipe.',
-        });
-    } catch(err: any) {
-        toast({ variant: 'destructive', title: 'Erro ao excluir corretor.', description: err.message });
-    }
+    setCorretores((prev) => prev.filter((c) => c.id !== corretorId));
+    toast({
+        title: 'Corretor Excluído!',
+        description: 'O corretor foi removido da sua equipe.',
+    });
   };
 
   const handleEdit = (corretor: Corretor) => {
@@ -114,14 +93,6 @@ export default function CorretoresPage() {
   }
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Carregando corretores...</p>
-        </div>
-      );
-    }
     if (corretores.length === 0) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">

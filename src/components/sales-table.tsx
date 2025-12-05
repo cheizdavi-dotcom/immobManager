@@ -88,7 +88,6 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
   };
 
   const sortedSales = React.useMemo(() => {
-    if (!sales) return [];
     return [...sales].sort((a, b) => {
         let aValue, bValue;
 
@@ -127,7 +126,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
       return urgentWords.some(word => observation.toLowerCase().includes(word));
   }
 
-  if (!sales || sales.length === 0) {
+  if (sales.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg border-2 border-dashed border-muted-foreground/20 py-20">
           <FileText className="h-16 w-16 text-muted-foreground" />
@@ -213,7 +212,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                             </div>
                         </TableCell>
                         <TableCell>{developmentsMap[sale.developmentId]?.name || 'N/A'}</TableCell>
-                        <TableCell>{sale.construtora || 'N/A'}</TableCell>
+                        <TableCell>{developmentsMap[sale.developmentId]?.construtora || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                         {formatCurrency(sale.saleValue)}
                         </TableCell>

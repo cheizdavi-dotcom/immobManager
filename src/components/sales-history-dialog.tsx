@@ -13,12 +13,8 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
-import { useMemo, useState, useEffect } from 'react';
-import { getClients } from '@/app/(app)/clientes/actions';
-import { getDevelopments } from '@/app/(app)/empreendimentos/actions';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { User } from '@/lib/types';
-
+import { clients as initialClients, developments as initialDevelopments } from '@/lib/data';
 
 type SalesHistoryDialogProps = {
     isOpen: boolean;
@@ -42,26 +38,8 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
 
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
-    const [user] = useLocalStorage<User | null>('user', null);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [developments, setDevelopments] = useState<Development[]>([]);
-
-     useEffect(() => {
-        if (isOpen && user?.id) {
-            const fetchData = async () => {
-                const [clientsData, developmentsData] = await Promise.all([
-                    getClients(user.id),
-                    getDevelopments(user.id),
-                ]);
-                setClients(clientsData);
-                setDevelopments(developmentsData);
-            };
-            fetchData();
-        }
-    }, [isOpen, user?.id]);
-
-    const clientsMap = useMemo(() => clients.reduce((acc, client) => ({...acc, [client.id]: client }), {} as Record<string, Client>), [clients]);
-    const developmentsMap = useMemo(() => developments.reduce((acc, dev) => ({...acc, [dev.id]: dev }), {} as Record<string, Development>), [developments]);
+    const [clients] = useLocalStorage<Client[]>('clients', initialClients);
+    const [developments] = useLocalStorage<Development[]>('developments', initialDevelopments);
 
   if (!corretor) return null;
 
@@ -92,8 +70,8 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
                         {sortedSales.map(sale => (
                             <TableRow key={sale.id}>
                                 <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
-                                <TableCell>{clientsMap[sale.clientId]?.name || 'N/A'}</TableCell>
-                                <TableCell>{developmentsMap[sale.developmentId]?.name || 'N/A'}</TableCell>
+                                <TableCell>{clients.find(c => c.id === sale.clientId)?.name || 'N/A'}</TableCell>
+                                <TableCell>{developments.find(d => d.id === sale.developmentId)?.name || 'N/A'}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(sale.saleValue)}</TableCell>
                                 <TableCell>
                                     <Badge className={statusBadgeVariants({status: sale.status})}>{sale.status}</Badge>

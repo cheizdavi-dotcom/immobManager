@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
@@ -11,55 +11,31 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit, Building, Loader2 } from 'lucide-react';
+import { Trash2, Edit, Building } from 'lucide-react';
 import { NewDevelopmentDialog } from '@/components/new-development-dialog';
 import type { Development, User } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getDevelopments, addOrUpdateDevelopment as addOrUpdateDevelopmentAction, deleteDevelopment as deleteDevelopmentAction } from './actions';
+import {developments as initialDevelopments} from '@/lib/data';
 
 export default function EmpreendimentosPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [developments, setDevelopments] = useState<Development[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [developments, setDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const fetchDevelopments = useCallback(async () => {
-    if (!user?.id) {
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const data = await getDevelopments(user.id);
-      setDevelopments(data);
-    } catch (err: any) {
-      console.error(err);
-      toast({ variant: 'destructive', title: 'Erro ao buscar empreendimentos.', description: err.message });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, toast]);
-  
-  useEffect(() => {
-    fetchDevelopments();
-  }, [fetchDevelopments]);
-
-
   const handleAddOrUpdateDevelopment = async (devData: Omit<Development, 'id' | 'userId'>, id?: string) => {
-    if (!user?.id) {
-        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
-        return null;
-    }
-    
     try {
-        const savedDevelopment = await addOrUpdateDevelopmentAction(devData, user.id, id);
+        let savedDevelopment: Development;
+        if (id) {
+            savedDevelopment = { ...devData, id, userId: user!.id };
+            setDevelopments(prev => prev.map(d => d.id === id ? savedDevelopment : d));
+        } else {
+            savedDevelopment = { ...devData, id: crypto.randomUUID(), userId: user!.id };
+            setDevelopments(prev => [...prev, savedDevelopment]);
+        }
         
-        await fetchDevelopments();
-
         toast({
             title: id ? 'Empreendimento Atualizado!' : 'Empreendimento Cadastrado!',
             description: `${savedDevelopment.name} foi salvo com sucesso.`,
@@ -71,22 +47,13 @@ export default function EmpreendimentosPage() {
     }
   };
 
-  const deleteDevelopment = async (developmentId: string) => {
-    if (!user?.id) {
-      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
-      return;
-    }
+  const deleteDevelopment = (developmentId: string) => {
     // TODO: Add logic to check if development is associated with a sale before deleting
-     try {
-        await deleteDevelopmentAction(developmentId, user.id);
-        setDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
-        toast({
-            title: 'Empreendimento Excluído!',
-            description: 'O empreendimento foi removido da sua lista.',
-        });
-    } catch(err: any) {
-        toast({ variant: 'destructive', title: 'Erro ao excluir empreendimento.', description: err.message });
-    }
+    setDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
+    toast({
+        title: 'Empreendimento Excluído!',
+        description: 'O empreendimento foi removido da sua lista.',
+    });
   };
 
   const handleEdit = (development: Development) => {
@@ -105,15 +72,6 @@ export default function EmpreendimentosPage() {
   }
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-           <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-muted-foreground">Carregando empreendimentos...</p>
-          </div>
-      )
-    }
-
     if (developments.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">

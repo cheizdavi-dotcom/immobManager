@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
 import { Input } from '@/components/ui/input';
@@ -12,24 +12,25 @@ import {
 } from '@/components/ui/select';
 import { getYear, getMonth } from 'date-fns';
 import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
+import {
+  sales as initialSalesData,
+  corretores as initialCorretores,
+  clients as initialClients,
+  developments as initialDevelopments,
+} from '@/lib/data';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { KanbanBoard } from '@/components/kanban-board';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { List, LayoutGrid, Loader2 } from 'lucide-react';
+import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { getSales, addOrUpdateSale as addOrUpdateSaleAction, deleteSale as deleteSaleAction } from './actions';
-import { getCorretores } from '../corretores/actions';
-import { getClients, addOrUpdateClient } from '../clientes/actions';
-import { getDevelopments, addOrUpdateDevelopment } from '../empreendimentos/actions';
 
 export default function VendasPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [corretores, setCorretores] = useState<Corretor[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [developments, setDevelopments] = useState<Development[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [sales, setSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+  const [clients, setClients] = useLocalStorage<Client[]>('clients', initialClients);
+  const [developments, setDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,88 +38,45 @@ export default function VendasPage() {
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
 
-   const fetchData = useCallback(async () => {
-    if (!user?.id) {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const [salesData, corretoresData, clientsData, developmentsData] = await Promise.all([
-        getSales(user.id),
-        getCorretores(user.id),
-        getClients(user.id),
-        getDevelopments(user.id),
-      ]);
-      setSales(salesData);
-      setCorretores(corretoresData);
-      setClients(clientsData);
-      setDevelopments(developmentsData);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, toast]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-
   const handleAddOrUpdateSale = async (saleData: Omit<Sale, 'id' | 'userId'>, id?: string) => {
-    if (!user?.id) {
-      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
-      return null;
-    }
     try {
-      const savedSale = await addOrUpdateSaleAction(saleData, user.id, id);
-      await fetchData();
-      toast({
-        title: id ? 'Venda Atualizada!' : 'Venda Cadastrada!',
-        description: 'A venda foi salva com sucesso.',
-      });
-      return savedSale;
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Erro ao salvar venda.', description: err.message });
-      return null;
+        let savedSale: Sale;
+        if (id) {
+            savedSale = { ...saleData, id, userId: user!.id, commissionStatus: sales.find(s => s.id === id)?.commissionStatus || 'Pendente' };
+            setSales(prev => prev.map(s => s.id === id ? savedSale : s));
+        } else {
+            savedSale = { ...saleData, id: crypto.randomUUID(), userId: user!.id, commissionStatus: 'Pendente' };
+            setSales(prev => [...prev, savedSale]);
+        }
+        
+        toast({
+            title: id ? 'Venda Atualizada!' : 'Venda Cadastrada!',
+            description: 'A venda foi salva com sucesso.',
+        });
+        return savedSale;
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Erro ao salvar venda.', description: err.message });
+        return null;
     }
   };
 
-  const handleDeleteSale = async (saleId: string) => {
-    if (!user?.id) {
-      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
-      return;
-    }
-    try {
-      await deleteSaleAction(saleId, user.id);
-      await fetchData();
-      toast({
+  const handleDeleteSale = (saleId: string) => {
+     setSales((prev) => prev.filter((s) => s.id !== saleId));
+     toast({
         title: 'Venda Excluída!',
         description: 'A venda foi removida com sucesso.',
-      });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Erro ao excluir venda.', description: err.message });
-    }
-  };
+    });
+  }
 
-  const handleClientSubmit = async (clientData: Omit<Client, 'id' | 'userId'>, id?: string) => {
-     if (!user?.id) {
-      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
-      return null;
-    }
-    const newClient = await addOrUpdateClient(clientData, user.id, id);
-    await fetchData();
+  const handleClientSubmit = async (clientData: Omit<Client, 'id' | 'userId'>) => {
+    const newClient = { ...clientData, id: crypto.randomUUID(), userId: user!.id };
+    setClients(prev => [...prev, newClient]);
     return newClient;
   }
 
-  const handleDevelopmentSubmit = async (devData: Omit<Development, 'id' | 'userId'>, id?: string) => {
-    if (!user?.id) {
-      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
-      return null;
-    }
-    const newDev = await addOrUpdateDevelopment(devData, user.id, id);
-    await fetchData();
+  const handleDevelopmentSubmit = async (devData: Omit<Development, 'id' | 'userId'>) => {
+    const newDev = { ...devData, id: crypto.randomUUID(), userId: user!.id };
+    setDevelopments(prev => [...prev, newDev]);
     return newDev;
   }
 
@@ -139,7 +97,7 @@ export default function VendasPage() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
         
-        const construtoraMatch = construtoraFilter === 'all' || (sale.construtora && sale.construtora.toLowerCase() === construtoraFilter.toLowerCase());
+        const construtoraMatch = construtoraFilter === 'all' || (developmentsMap[sale.developmentId]?.construtora.toLowerCase() === construtoraFilter.toLowerCase());
 
         const monthMatch =
         monthFilter === 'all' || saleMonth === parseInt(monthFilter);
@@ -148,7 +106,7 @@ export default function VendasPage() {
 
         return clientNameMatch && monthMatch && yearMatch && construtoraMatch;
     })
-  }, [sales, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap]);
+  }, [sales, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap, developmentsMap]);
 
   const uniqueYears = useMemo(() => {
     return Array.from(
@@ -158,39 +116,10 @@ export default function VendasPage() {
 
   const uniqueConstrutoras = useMemo(() => {
     return Array.from(
-        new Set(sales.map((dev) => dev.construtora).filter(Boolean))
+        new Set(developments.map((dev) => dev.construtora))
   ).sort()
-}, [sales]);
+}, [developments]);
 
-
-  const renderContent = () => {
-    if (isLoading) {
-        return (
-             <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground">Carregando vendas...</p>
-            </div>
-        )
-    }
-
-    return (
-       <TabsContent value="tabela">
-          <SalesTable 
-              sales={filteredSales} 
-              onSaleSubmit={handleAddOrUpdateSale} 
-              onDeleteSale={handleDeleteSale}
-              corretores={corretores}
-              corretoresMap={corretoresMap}
-              clientsMap={clientsMap}
-              developmentsMap={developmentsMap}
-              clients={clients}
-              onClientSubmit={handleClientSubmit}
-              developments={developments}
-              onDevelopmentSubmit={handleDevelopmentSubmit}
-          />
-      </TabsContent>
-    )
-  }
 
   return (
     <main className="flex flex-1 flex-col">
@@ -258,45 +187,36 @@ export default function VendasPage() {
             </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            {isLoading ? (
-                 <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-muted-foreground">Carregando dados...</p>
-                </div>
-            ) : (
-                <>
-                    <TabsContent value="tabela">
-                        <SalesTable 
-                            sales={filteredSales} 
-                            onSaleSubmit={handleAddOrUpdateSale} 
-                            onDeleteSale={handleDeleteSale}
-                            corretores={corretores}
-                            corretoresMap={corretoresMap}
-                            clientsMap={clientsMap}
-                            developmentsMap={developmentsMap}
-                            clients={clients}
-                            onClientSubmit={handleClientSubmit}
-                            developments={developments}
-                            onDevelopmentSubmit={handleDevelopmentSubmit}
-                        />
-                    </TabsContent>
-                    <TabsContent value="kanban" className="flex-1">
-                        <KanbanBoard 
-                            sales={filteredSales} 
-                            statuses={ALL_STATUSES}
-                            onSaleSubmit={handleAddOrUpdateSale}
-                            corretoresMap={corretoresMap}
-                            clientsMap={clientsMap}
-                            developmentsMap={developmentsMap}
-                            corretores={corretores}
-                            clients={clients}
-                            developments={developments}
-                            onClientSubmit={handleClientSubmit}
-                            onDevelopmentSubmit={handleDevelopmentSubmit}
-                        />
-                    </TabsContent>
-                </>
-            )}
+            <TabsContent value="tabela">
+                <SalesTable 
+                    sales={filteredSales} 
+                    onSaleSubmit={handleAddOrUpdateSale} 
+                    onDeleteSale={handleDeleteSale}
+                    corretores={corretores}
+                    corretoresMap={corretoresMap}
+                    clientsMap={clientsMap}
+                    developmentsMap={developmentsMap}
+                    clients={clients}
+                    onClientSubmit={handleClientSubmit}
+                    developments={developments}
+                    onDevelopmentSubmit={handleDevelopmentSubmit}
+                />
+            </TabsContent>
+            <TabsContent value="kanban" className="flex-1">
+                <KanbanBoard 
+                    sales={filteredSales} 
+                    statuses={ALL_STATUSES}
+                    onSaleSubmit={handleAddOrUpdateSale}
+                    corretoresMap={corretoresMap}
+                    clientsMap={clientsMap}
+                    developmentsMap={developmentsMap}
+                    corretores={corretores}
+                    clients={clients}
+                    developments={developments}
+                    onClientSubmit={handleClientSubmit}
+                    onDevelopmentSubmit={handleDevelopmentSubmit}
+                />
+            </TabsContent>
         </div>
        </Tabs>
     </main>

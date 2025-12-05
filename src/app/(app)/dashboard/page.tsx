@@ -1,9 +1,10 @@
 'use client';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
-import { useMemo, useEffect, useState, useCallback } from 'react';
+import { clients, sales as initialSalesData, developments, corretores } from '@/lib/data';
+import { useMemo, useEffect } from 'react';
 import { KpiCard } from '@/components/kpi-card';
-import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle, Loader2 } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
 import { BuilderMixChart } from '@/components/builder-mix-chart';
@@ -11,47 +12,14 @@ import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
 import { subDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { getSales } from '../vendas/actions';
-import { getCorretores } from '../corretores/actions';
-import { getClients } from '../clientes/actions';
-import { getDevelopments } from '../empreendimentos/actions';
 
 export default function DashboardPage() {
     const [user] = useLocalStorage<User | null>('user', null);
-    const [sales, setSales] = useState<Sale[]>([]);
-    const [corretores, setCorretores] = useState<Corretor[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [developments, setDevelopments] = useState<Development[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [sales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+    const [corretoresData] = useLocalStorage<Corretor[]>('corretores', corretores);
+    const [clientsData] = useLocalStorage<Client[]>('clients', clients);
+    const [developmentsData] = useLocalStorage<Development[]>('developments', developments);
     const { toast } = useToast();
-
-    const fetchData = useCallback(async () => {
-        if (!user?.id) {
-            setIsLoading(false);
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const [salesData, corretoresData, clientsData, developmentsData] = await Promise.all([
-                getSales(user.id),
-                getCorretores(user.id),
-                getClients(user.id),
-                getDevelopments(user.id),
-            ]);
-            setSales(salesData);
-            setCorretores(corretoresData);
-            setClients(clientsData);
-            setDevelopments(developmentsData);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Erro ao carregar o dashboard', description: error.message });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [user?.id, toast]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
 
     useEffect(() => {
         const showToast = localStorage.getItem('showLoginSuccessToast');
@@ -72,10 +40,6 @@ export default function DashboardPage() {
         comissoesPendentes,
         conversionRate,
     } = useMemo(() => {
-        if (!sales) {
-          return { faturamentoVendasPagas: 0, vgvPipelineAtivo: 0, comissoesPagas: 0, comissoesPendentes: 0, conversionRate: 0 };
-        }
-        
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
@@ -97,7 +61,6 @@ export default function DashboardPage() {
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {
-        if (!sales || sales.length === 0 || !corretores || corretores.length === 0) return [];
         const salesByBroker = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
@@ -108,27 +71,20 @@ export default function DashboardPage() {
                 return acc;
         }, {} as Record<string, number>);
 
-        const corretoresMap = corretores.reduce((acc, c) => {
-            acc[c.id] = c.name;
-            return acc;
-        }, {} as Record<string, string>);
-
         return Object.entries(salesByBroker)
             .map(([brokerId, total]) => ({
-                name: corretoresMap[brokerId] || 'Desconhecido',
+                name: corretoresData.find(c => c.id === brokerId)?.name || 'Desconhecido',
                 total,
             }))
             .sort((a,b) => b.total - a.total)
             .slice(0, 5);
-    }, [sales, corretores]);
+    }, [sales, corretoresData]);
 
     const builderMixData = useMemo(() => {
-        if (!sales || sales.length === 0) return [];
-
         const salesByBuilder = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
-                const builder = sale.construtora;
+                const builder = developmentsData.find(d => d.id === sale.developmentId)?.construtora || 'Desconhecida';
                 if (!acc[builder]) {
                     acc[builder] = { name: builder, value: 0 };
                 }
@@ -137,52 +93,39 @@ export default function DashboardPage() {
         }, {} as Record<string, {name: string, value: number}>);
 
         return Object.values(salesByBuilder);
-    }, [sales]);
+    }, [sales, developmentsData]);
 
     const attentionSales = useMemo(() => {
-        if (!sales) return [];
         const sevenDaysAgo = subDays(new Date(), 7);
         return sales.filter(sale => 
             (sale.status === 'Análise de Crédito / SPC' || sale.status === 'Aguardando Assinatura' || sale.status === 'Aguardando Pagamento Ato') &&
-            sale.saleDate && new Date(sale.saleDate) < sevenDaysAgo
+            new Date(sale.saleDate) < sevenDaysAgo
         );
     }, [sales]);
 
-     const corretoresMap = useMemo(() => {
-        if (!corretores) return {};
-        return corretores.reduce((acc, corretor) => {
+    const corretoresMap = useMemo(() => {
+        return corretoresData.reduce((acc, corretor) => {
             acc[corretor.id] = corretor;
             return acc;
         }, {} as Record<string, Corretor>);
-    }, [corretores]);
+    }, [corretoresData]);
 
     const clientsMap = useMemo(() => {
-        if (!clients) return {};
-        return clients.reduce((acc, client) => {
+        return clientsData.reduce((acc, client) => {
             acc[client.id] = client;
             return acc;
         }, {} as Record<string, Client>);
-    }, [clients]);
+    }, [clientsData]);
 
      const developmentsMap = useMemo(() => {
-        if (!developments) return {};
-        return developments.reduce((acc, dev) => {
+        return developmentsData.reduce((acc, dev) => {
             acc[dev.id] = dev;
             return acc;
         }, {} as Record<string, Development>);
-    }, [developments]);
-
-    if (isLoading) {
-        return (
-            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground">Carregando dashboard...</p>
-            </main>
-        );
-    }
+    }, [developmentsData]);
 
 
-    if (!isLoading && sales.length === 0) {
+    if (sales.length === 0) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
                  <div className="flex flex-col items-center gap-2">
