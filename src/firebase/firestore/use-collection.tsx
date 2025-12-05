@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import {
   Query,
   onSnapshot,
@@ -8,12 +8,41 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  Timestamp,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Sale } from '@/lib/types';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
+
+const isTimestamp = (value: any): value is Timestamp => {
+  return value && typeof value.toDate === 'function';
+};
+
+const convertTimestamps = <T>(data: T): T => {
+  if (data === null || typeof data !== 'object') {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => convertTimestamps(item)) as any;
+  }
+
+  const newData = { ...data };
+  for (const key in newData) {
+    const value = newData[key as keyof T];
+    if (isTimestamp(value)) {
+      (newData as any)[key] = value.toDate();
+    } else if (typeof value === 'object' && value !== null) {
+      (newData as any)[key] = convertTimestamps(value);
+    }
+  }
+
+  return newData;
+};
+
 
 /**
  * Interface for the return value of the useCollection hook.
@@ -23,6 +52,7 @@ export interface UseCollectionResult<T> {
   data: WithId<T>[] | null; // Document data with ID, or null.
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
+  setData: Dispatch<SetStateAction<WithId<T>[] | null>>;
 }
 
 /* Internal implementation of Query:
@@ -58,7 +88,7 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
@@ -78,7 +108,8 @@ export function useCollection<T = any>(
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
+          const docData = convertTimestamps(doc.data() as T);
+          results.push({ ...docData, id: doc.id });
         }
         setData(results);
         setError(null);
@@ -107,8 +138,9 @@ export function useCollection<T = any>(
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+    console.warn('The query/reference passed to useCollection was not memoized with useMemoFirebase. This can cause performance issues and infinite loops.', memoizedTargetRefOrQuery);
   }
-  return { data, isLoading, error };
+  return { data, isLoading, error, setData };
 }

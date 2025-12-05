@@ -76,12 +76,12 @@ type NewSaleDialogProps = {
     onOpenChange?: (isOpen: boolean) => void;
     corretores: Corretor[];
     clients: Client[];
-    setClients: (clients: Client[] | ((c: Client[]) => Client[])) => void;
+    onClientSubmit: (client: Client) => void;
     developments: Development[];
-    setDevelopments: (developments: Development[] | ((d: Development[]) => Development[])) => void;
+    onDevelopmentSubmit: (dev: Development) => void;
 }
 
-const CurrencyInput = ({ value, onChange }: { value: number, onChange: (value: number) => void }) => {
+const CurrencyInput = ({ value, onChange, ...props }: { value: number, onChange: (value: number) => void } & Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'>) => {
     const [displayValue, setDisplayValue] = useState(formatCurrency(value));
 
     useEffect(() => {
@@ -91,26 +91,27 @@ const CurrencyInput = ({ value, onChange }: { value: number, onChange: (value: n
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const numericValue = parseCurrency(e.target.value);
         onChange(numericValue);
-        setDisplayValue(formatCurrency(numericValue));
+        setDisplayValue(e.target.value);
     };
 
-    const handleBlur = () => {
-        setDisplayValue(formatCurrency(value));
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      setDisplayValue(formatCurrency(parseCurrency(e.target.value)));
     }
 
     return (
         <Input
             type="text"
-            inputMode="numeric"
+            inputMode="decimal"
             placeholder="R$ 0,00"
             value={displayValue}
             onChange={handleChange}
             onBlur={handleBlur}
+            {...props}
         />
     );
 };
 
-export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, setClients, developments, setDevelopments }: NewSaleDialogProps) {
+export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, onClientSubmit, developments, onDevelopmentSubmit }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   
   const { toast } = useToast();
@@ -197,6 +198,9 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
 
   const onSubmit = (data: SaleFormValues) => {
+    const clientName = clients.find(c => c.id === data.clientId)?.name || data.clientId;
+    const empreendimentoName = developments.find(d => d.id === data.developmentId)?.name || data.developmentId;
+
     const finalData: Sale = {
         ...data,
         id: sale?.id || new Date().toISOString(),
@@ -204,8 +208,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         observations: data.observations || '',
         combinado: data.combinado || '',
         combinadoDate: data.combinadoDate || null,
-        clientName: clients.find(c => c.id === data.clientId)?.name || data.clientId,
-        empreendimento: developments.find(d => d.id === data.developmentId)?.name || data.developmentId,
+        clientName: clientName,
+        empreendimento: empreendimentoName,
     };
     onSaleSubmit(finalData);
     toast({
@@ -306,7 +310,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                         onChange={(newValue, isNew) => {
                             if (isNew && newValue) {
                                 const newClient: Client = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio' };
-                                setClients(prev => [...prev, newClient]);
+                                onClientSubmit(newClient);
                                 field.onChange(newClient.id);
                             } else {
                                 field.onChange(newValue);
@@ -333,7 +337,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                                 if (isNew && newValue) {
                                     // When creating a new development, we can prompt for construtora or leave it blank
                                     const newDev: Development = { id: new Date().toISOString(), name: newValue, construtora: '', localizacao: '' };
-                                    setDevelopments(prev => [...prev, newDev]);
+                                    onDevelopmentSubmit(newDev);
                                     field.onChange(newDev.id);
                                     setValue('construtora', ''); // Reset construtora
                                 } else {

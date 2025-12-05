@@ -28,9 +28,9 @@ type SalesTableProps = {
   onDeleteSale: (saleId: string) => void;
   corretores: Corretor[];
   clients: Client[];
-  setClients: (clients: Client[] | ((c: Client[]) => Client[])) => void;
+  onClientSubmit: (client: Client) => void;
   developments: Development[];
-  setDevelopments: (developments: Development[] | ((d: Development[]) => Development[])) => void;
+  onDevelopmentSubmit: (dev: Development) => void;
   corretoresMap: Record<string, Corretor>;
   clientsMap: Record<string, Client>;
   developmentsMap: Record<string, Development>;
@@ -51,7 +51,7 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
   },
 });
 
-export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clients, setClients, developments, setDevelopments, corretoresMap, clientsMap, developmentsMap }: SalesTableProps) {
+export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clients, onClientSubmit, developments, onDevelopmentSubmit, corretoresMap, clientsMap, developmentsMap }: SalesTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('saleDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -136,7 +136,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
             Ajuste os filtros ou clique em 'Nova Venda' para adicionar uma.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} setClients={setClients} developments={developments} setDevelopments={setDevelopments} />
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} onClientSubmit={onClientSubmit} developments={developments} onDevelopmentSubmit={onDevelopmentSubmit} />
           </div>
         </div>
     );
@@ -285,9 +285,9 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                 onSaleSubmit={onSaleSubmit}
                 corretores={corretores}
                 clients={clients}
-                setClients={setClients}
+                onClientSubmit={onClientSubmit}
                 developments={developments}
-                setDevelopments={setDevelopments}
+                onDevelopmentSubmit={onDevelopmentSubmit}
             />
         )}
     </>

@@ -4,22 +4,35 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, User, Users, DollarSign, TrendingUp, Phone, List, Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { NewCorretorDialog } from '@/components/new-corretor-dialog';
-import { sales as initialSales, corretores as initialCorretores, getSalesStorageKey, getCorretoresStorageKey } from '@/lib/data';
 import type { Corretor, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
-import useLocalStorage from '@/hooks/useLocalStorage';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 export default function CorretoresPage() {
   const { user } = useUser();
-  const userEmail = user?.email || '';
+  const firestore = useFirestore();
 
-  const [corretores, setCorretores] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
-  const [sales] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);
+  const corretoresQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'corretores');
+  }, [firestore, user?.uid]);
+
+  const salesQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'sales');
+  }, [firestore, user?.uid]);
+
+  const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
+  const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
+
   const [editingCorretor, setEditingCorretor] = useState<Corretor | null>(null);
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
@@ -27,18 +40,13 @@ export default function CorretoresPage() {
   const { toast } = useToast();
 
   const addOrUpdateCorretor = (corretor: Corretor) => {
-    setCorretores((prev) => {
-      const existingIndex = prev.findIndex((c) => c.id === corretor.id);
-      if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex] = corretor;
-        return updated;
-      }
-      return [...prev, corretor];
-    });
+    if (!firestore || !user?.uid) return;
+    const corretorRef = doc(firestore, 'users', user.uid, 'corretores', corretor.id);
+    setDocumentNonBlocking(corretorRef, corretor, { merge: true });
   };
 
   const deleteCorretor = (corretorId: string) => {
+    if (!sales || !firestore || !user?.uid) return;
     const salesFromCorretor = sales.find(s => s.corretorId === corretorId);
     if(salesFromCorretor){
        toast({
@@ -48,7 +56,8 @@ export default function CorretoresPage() {
       });
       return;
     }
-    setCorretores((prev) => prev.filter((c) => c.id !== corretorId));
+    const corretorRef = doc(firestore, 'users', user.uid, 'corretores', corretorId);
+    deleteDocumentNonBlocking(corretorRef);
     toast({
         title: "Corretor Excluído!",
         description: "O corretor foi removido da sua equipe.",
@@ -66,13 +75,29 @@ export default function CorretoresPage() {
   }
 
   const getCorretorKPIs = (corretorId: string) => {
-    const corretorSales = sales.filter(s => s.corretorId === corretorId && s.status === 'Pago');
+    if (!sales) return { totalVendido: 0, vendasRealizadas: 0 };
+    const corretorSales = sales.filter(s => s.corretorId === corretorId && s.status === 'Venda Concluída / Paga');
     const totalVendido = corretorSales.reduce((acc, sale) => acc + sale.saleValue, 0);
     const vendasRealizadas = corretorSales.length;
     return { totalVendido, vendasRealizadas };
   }
 
-  if (corretores.length === 0) {
+  if (isLoadingCorretores || isLoadingSales) {
+    return (
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-xl" />)}
+        </div>
+      </main>
+    );
+  }
+
+
+  if (!corretores || corretores.length === 0) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
         <div className="flex flex-col items-center gap-2">
@@ -114,7 +139,7 @@ export default function CorretoresPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {corretores.map((corretor) => {
           const { totalVendido, vendasRealizadas } = getCorretorKPIs(corretor.id);
-          const whatsappLink = `https://wa.me/${corretor.phone.replace(/\D/g, '')}`;
+          const whatsappLink = `https://wa.me/${(corretor.phone || '').replace(/\D/g, '')}`;
 
           return (
             <Card key={corretor.id} className="flex flex-col">
@@ -185,7 +210,7 @@ export default function CorretoresPage() {
             isOpen={isHistoryDialogOpen}
             onOpenChange={setIsHistoryDialogOpen}
             corretor={selectedCorretor}
-            sales={sales.filter(s => s.corretorId === selectedCorretor.id)}
+            sales={sales?.filter(s => s.corretorId === selectedCorretor.id) || []}
         />
       )}
     </main>

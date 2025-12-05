@@ -8,15 +8,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Sale, Corretor, Client, Development, SaleStatus } from '@/lib/types';
+import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
 import { useMemo } from 'react';
-import useLocalStorage from '@/hooks/useLocalStorage';
-import { useUser } from '@/firebase';
-import { clients as initialClients, developments as initialDevelopments, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 
 type SalesHistoryDialogProps = {
@@ -42,11 +41,22 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
     const { user } = useUser();
-    const userEmail = user?.email || '';
-    const [clientsData] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
-    const [developmentsData] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
+    const firestore = useFirestore();
+
+    const clientsQuery = useMemoFirebase(() => {
+      if (!firestore || !user?.uid) return null;
+      return collection(firestore, 'users', user.uid, 'clients');
+    }, [firestore, user?.uid]);
+    const { data: clientsData } = useCollection<Client>(clientsQuery);
+
+    const developmentsQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return collection(firestore, 'users', user.uid, 'developments');
+    }, [firestore, user?.uid]);
+    const { data: developmentsData } = useCollection<Development>(developmentsQuery);
 
     const clientsMap = useMemo(() => {
+        if (!clientsData) return {};
         return clientsData.reduce((acc, client) => {
             acc[client.id] = client;
             return acc;
@@ -54,6 +64,7 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
     }, [clientsData]);
 
     const developmentsMap = useMemo(() => {
+        if (!developmentsData) return {};
         return developmentsData.reduce((acc, dev) => {
             acc[dev.id] = dev;
             return acc;

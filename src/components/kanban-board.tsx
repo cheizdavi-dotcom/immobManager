@@ -13,12 +13,12 @@ type KanbanBoardProps = {
   developmentsMap: Record<string, Development>;
   corretores: Corretor[];
   clients: Client[];
-  setClients: (clients: Client[] | ((prev: Client[])=> Client[])) => void;
+  onClientSubmit: (client: Client) => void;
   developments: Development[];
-  setDevelopments: (developments: Development[]| ((prev: Development[])=> Development[])) => void;
+  onDevelopmentSubmit: (dev: Development) => void;
 };
 
-export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap, clientsMap, developmentsMap, corretores, clients, setClients, developments, setDevelopments }: KanbanBoardProps) {
+export function KanbanBoard({ sales, onSaleSubmit, corretoresMap, clientsMap, developmentsMap, corretores, clients, onClientSubmit, developments, onDevelopmentSubmit }: KanbanBoardProps) {
 
     if (!sales || sales.length === 0) {
     return (
@@ -29,7 +29,7 @@ export function KanbanBoard({ sales, statuses, onSaleSubmit, corretoresMap, clie
             Ajuste os filtros ou clique em 'Nova Venda' para adicionar uma.
           </p>
           <div className='mt-4'>
-            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} setClients={setClients} developments={developments} setDevelopments={setDevelopments} />
+            <NewSaleDialog onSaleSubmit={onSaleSubmit} corretores={corretores} clients={clients} onClientSubmit={onClientSubmit} developments={developments} onDevelopmentSubmit={onDevelopmentSubmit} />
           </div>
         </div>
     );

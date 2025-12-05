@@ -1,27 +1,47 @@
 'use client';
-import useLocalStorage from '@/hooks/useLocalStorage';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
-import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments, getSalesStorageKey, getCorretoresStorageKey, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
 import { useMemo } from 'react';
 import { KpiCard } from '@/components/kpi-card';
-import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Users, Building, AlertTriangle, CalendarClock, Package } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
 import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
-import { isAfter, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { useUser } from '@/firebase';
+import { subDays } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
     const { user } = useUser();
-    const userEmail = user?.email || '';
+    const firestore = useFirestore();
 
-    const [sales] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);
-    const [corretores] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
-    const [clients] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
-    const [developments] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
+    const salesQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return collection(firestore, 'users', user.uid, 'sales');
+    }, [firestore, user?.uid]);
+    const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
+
+    const corretoresQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return collection(firestore, 'users', user.uid, 'corretores');
+    }, [firestore, user?.uid]);
+    const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
+
+    const clientsQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return collection(firestore, 'users', user.uid, 'clients');
+    }, [firestore, user?.uid]);
+    const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
+    
+    const developmentsQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return collection(firestore, 'users', user.uid, 'developments');
+    }, [firestore, user?.uid]);
+    const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
+
+    const isLoading = isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
 
     const {
         faturamentoVendasPagas,
@@ -30,8 +50,12 @@ export default function DashboardPage() {
         comissoesPendentes,
         conversionRate,
     } = useMemo(() => {
-        const activeSales = sales?.filter(s => s.status !== 'Venda Cancelada / Caiu') || [];
-        const completedSales = sales?.filter(s => s.status === 'Venda Concluída / Paga') || [];
+        if (!sales) {
+          return { faturamentoVendasPagas: 0, vgvPipelineAtivo: 0, comissoesPagas: 0, comissoesPendentes: 0, conversionRate: 0 };
+        }
+        
+        const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
+        const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
         const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
@@ -44,7 +68,7 @@ export default function DashboardPage() {
             .filter(s => s.commissionStatus === 'Pendente')
             .reduce((acc, s) => acc + (s.commission || 0), 0);
         
-        const totalClosedDeals = sales?.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length || 0;
+        const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
 
         return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate };
@@ -126,8 +150,29 @@ export default function DashboardPage() {
         }, {} as Record<string, Development>);
     }, [developments]);
 
+    if (isLoading) {
+       return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+             <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
+                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-[108px] w-full" />)}
+            </div>
 
-    if (!sales || sales.length === 0 && (!clients || clients.length === 0)) {
+            <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2 grid grid-cols-1 gap-4 md:gap-8">
+                    <Skeleton className="h-[430px] w-full" />
+                    <Skeleton className="h-[430px] w-full" />
+                </div>
+                <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-8">
+                     <Skeleton className="h-[400px] w-full" />
+                     <Skeleton className="h-[400px] w-full" />
+                </div>
+            </div>
+        </main>
+       )
+    }
+
+
+    if (!sales || sales.length === 0) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
                  <div className="flex flex-col items-center gap-2">

@@ -1,18 +1,46 @@
 'use client';
     
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import {
   DocumentReference,
   onSnapshot,
   DocumentData,
   FirestoreError,
   DocumentSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
+
+const isTimestamp = (value: any): value is Timestamp => {
+  return value && typeof value.toDate === 'function';
+};
+
+const convertTimestamps = <T>(data: T): T => {
+  if (data === null || typeof data !== 'object') {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => convertTimestamps(item)) as any;
+  }
+
+  const newData = { ...data };
+  for (const key in newData) {
+    const value = newData[key as keyof T];
+    if (isTimestamp(value)) {
+      (newData as any)[key] = value.toDate();
+    } else if (typeof value === 'object' && value !== null) {
+      (newData as any)[key] = convertTimestamps(value);
+    }
+  }
+
+  return newData;
+};
+
 
 /**
  * Interface for the return value of the useDoc hook.
@@ -22,6 +50,7 @@ export interface UseDocResult<T> {
   data: WithId<T> | null; // Document data with ID, or null.
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
+  setData: Dispatch<SetStateAction<WithId<T> | null>>;
 }
 
 /**
@@ -39,12 +68,12 @@ export interface UseDocResult<T> {
  * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
 export function useDoc<T = any>(
-  memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+  memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
@@ -57,13 +86,13 @@ export function useDoc<T = any>(
 
     setIsLoading(true);
     setError(null);
-    // Optional: setData(null); // Clear previous data instantly
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+           const docData = convertTimestamps(snapshot.data() as T);
+           setData({ ...docData, id: snapshot.id });
         } else {
           // Document does not exist
           setData(null);
@@ -89,5 +118,9 @@ export function useDoc<T = any>(
     return () => unsubscribe();
   }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
 
-  return { data, isLoading, error };
+  if(memoizedDocRef && !memoizedDocRef.__memo) {
+    console.warn('The document reference passed to useDoc was not memoized with useMemoFirebase. This can cause performance issues and infinite loops.', memoizedDocRef);
+  }
+
+  return { data, isLoading, error, setData };
 }

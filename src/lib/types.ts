@@ -44,7 +44,7 @@ export type Development = {
 
 export type Sale = {
   id: string;
-  saleDate: Date;
+  saleDate: any; // Stored as Timestamp, but Date object in form
   corretorId: string;
   clientId: string;
   developmentId: string;
@@ -57,7 +57,7 @@ export type Sale = {
   commissionStatus: CommissionStatus;
   observations?: string;
   combinado?: string;
-  combinadoDate?: Date | null;
+  combinadoDate?: any | null; // Stored as Timestamp, but Date object in form
   // Denormalized fields for easier access
   clientName: string;
   empreendimento: string;

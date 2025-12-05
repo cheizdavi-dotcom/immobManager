@@ -1,6 +1,5 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { sales as initialSales, corretores as initialCorretores, clients as initialClients, developments as initialDevelopments, getSalesStorageKey, getCorretoresStorageKey, getClientsStorageKey, getDevelopmentsStorageKey } from '@/lib/data';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
 import { Input } from '@/components/ui/input';
@@ -17,39 +16,61 @@ import { KanbanBoard } from '@/components/kanban-board';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
-import useLocalStorage from '@/hooks/useLocalStorage';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function VendasPage() {
   const { user } = useUser();
-  const userEmail = user?.email || '';
+  const firestore = useFirestore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
   
-  const [salesData, setSalesData] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);
-  const [corretoresData] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
-  const [clientsData, setClientsData] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
-  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
+  const salesQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'sales');
+  }, [firestore, user?.uid]);
+  const { data: salesData, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
+
+  const corretoresQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'corretores');
+  }, [firestore, user?.uid]);
+  const { data: corretoresData, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
+
+  const clientsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'clients');
+  }, [firestore, user?.uid]);
+  const { data: clientsData, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
+  
+  const developmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'developments');
+  }, [firestore, user?.uid]);
+  const { data: developmentsData, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
   const addOrUpdateSale = (sale: Sale) => {
-    setSalesData((prevSales) => {
-      const sales = prevSales || [];
-      const existingSaleIndex = sales.findIndex((s) => s.id === sale.id);
-      if (existingSaleIndex > -1) {
-        const updatedSales = [...sales];
-        updatedSales[existingSaleIndex] = sale;
-        return updatedSales;
-      } else {
-        return [...sales, sale];
+    if (!firestore || !user?.uid) return;
+    const saleRef = doc(firestore, 'users', user.uid, 'sales', sale.id);
+    const dataToSave = { ...sale };
+    // Firestore cannot store undefined values.
+    Object.keys(dataToSave).forEach(key => {
+      if (dataToSave[key as keyof Sale] === undefined) {
+        delete dataToSave[key as keyof Sale];
       }
     });
+    setDocumentNonBlocking(saleRef, dataToSave, { merge: true });
   };
 
   const deleteSale = (saleId: string) => {
-    setSalesData((prevSales) => (prevSales || []).filter((s) => s.id !== saleId));
+    if (!firestore || !user?.uid) return;
+    const saleRef = doc(firestore, 'users', user.uid, 'sales', saleId);
+    deleteDocumentNonBlocking(saleRef);
   };
 
 
@@ -114,6 +135,20 @@ export default function VendasPage() {
     }, {} as Record<string, Corretor>);
   }, [corretoresData]);
 
+  const isLoading = isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
+
+  const addOrUpdateClient = (client: Client) => {
+    if (!firestore || !user?.uid) return;
+    const clientRef = doc(firestore, 'users', user.uid, 'clients', client.id);
+    setDocumentNonBlocking(clientRef, client, { merge: true });
+  };
+
+  const addOrUpdateDevelopment = (dev: Development) => {
+    if (!firestore || !user?.uid) return;
+    const devRef = doc(firestore, 'users', user.uid, 'developments', dev.id);
+    setDocumentNonBlocking(devRef, dev, { merge: true });
+  }
+
   return (
     <main className="flex flex-1 flex-col">
        <Tabs defaultValue="tabela" className="flex flex-col flex-1">
@@ -125,7 +160,7 @@ export default function VendasPage() {
                     <TabsTrigger value="tabela"><List className="h-4 w-4" /></TabsTrigger>
                     <TabsTrigger value="kanban"><LayoutGrid className="h-4 w-4" /></TabsTrigger>
                 </TabsList>
-                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} clients={clientsData} setClients={setClientsData} developments={developmentsData} setDevelopments={setDevelopmentsData} />
+                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData || []} clients={clientsData || []} onClientSubmit={addOrUpdateClient} developments={developmentsData || []} onDevelopmentSubmit={addOrUpdateDevelopment} />
             </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -173,36 +208,47 @@ export default function VendasPage() {
             </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-             <TabsContent value="tabela">
-                <SalesTable 
-                    sales={filteredSales} 
-                    onSaleSubmit={addOrUpdateSale} 
-                    onDeleteSale={deleteSale}
-                    corretores={corretoresData}
-                    corretoresMap={corretoresMap}
-                    clientsMap={clientsMap}
-                    developmentsMap={developmentsMap}
-                    clients={clientsData}
-                    setClients={setClientsData}
-                    developments={developmentsData}
-                    setDevelopments={setDevelopmentsData}
-                />
-             </TabsContent>
-              <TabsContent value="kanban" className="flex-1">
-                 <KanbanBoard 
-                    sales={filteredSales} 
-                    statuses={ALL_STATUSES}
-                    onSaleSubmit={addOrUpdateSale}
-                    corretoresMap={corretoresMap}
-                    clientsMap={clientsMap}
-                    developmentsMap={developmentsMap}
-                    corretores={corretoresData}
-                    clients={clientsData}
-                    developments={developmentsData}
-                    setClients={setClientsData}
-                    setDevelopments={setDevelopmentsData}
-                 />
-            </TabsContent>
+            {isLoading ? (
+                <div className='flex flex-col gap-4'>
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </div>
+            ) : (
+                <>
+                    <TabsContent value="tabela">
+                        <SalesTable 
+                            sales={filteredSales} 
+                            onSaleSubmit={addOrUpdateSale} 
+                            onDeleteSale={deleteSale}
+                            corretores={corretoresData || []}
+                            corretoresMap={corretoresMap}
+                            clientsMap={clientsMap}
+                            developmentsMap={developmentsMap}
+                            clients={clientsData || []}
+                            onClientSubmit={addOrUpdateClient}
+                            developments={developmentsData || []}
+                            onDevelopmentSubmit={addOrUpdateDevelopment}
+                        />
+                    </TabsContent>
+                    <TabsContent value="kanban" className="flex-1">
+                        <KanbanBoard 
+                            sales={filteredSales} 
+                            statuses={ALL_STATUSES}
+                            onSaleSubmit={addOrUpdateSale}
+                            corretoresMap={corretoresMap}
+                            clientsMap={clientsMap}
+                            developmentsMap={developmentsMap}
+                            corretores={corretoresData || []}
+                            clients={clientsData || []}
+                            developments={developmentsData || []}
+                            onClientSubmit={addOrUpdateClient}
+                            onDevelopmentSubmit={addOrUpdateDevelopment}
+                        />
+                    </TabsContent>
+                </>
+            )}
         </div>
        </Tabs>
     </main>

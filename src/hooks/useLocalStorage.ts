@@ -1,44 +1,45 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
+// This custom hook is no longer the primary method for data persistence
+// since we've migrated to Firebase. However, it can be kept for
+// potential client-side, non-critical state management if needed.
+// For all business-critical data (sales, clients, etc.), use Firebase hooks.
+
 function useLocalStorage<T>(
   key: string,
   initialValue: T
 ): [T, (value: T | ((val: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
-
-  // We need to wait until the component mounts to safely access localStorage.
-  useEffect(() => {
-    // This effect runs only once on the client after hydration.
-    try {
-      const item = window.localStorage.getItem(key);
-      setStoredValue(item ? JSON.parse(item) : initialValue);
-    } catch (error) {
-      console.log(error);
-      setStoredValue(initialValue);
+  // State to store our value
+  // Pass initial state function to useState so logic is only executed once
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === 'undefined') {
+      return initialValue;
     }
-  }, [key, initialValue]);
+    try {
+      // Get from local storage by key
+      const item = window.localStorage.getItem(key);
+      // Parse stored json or if none return initialValue
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      // If error also return initialValue
+      console.log(error);
+      return initialValue;
+    }
+  });
 
-
-  const setValue = useCallback(
-    (value: T | ((val: T) => T)) => {
-      if (typeof window === 'undefined') {
-        console.warn(`Tried to set localStorage key “${key}” even though window is not defined`);
-        return;
-      }
+  // useEffect to update local storage when the state changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
       try {
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
-        setStoredValue(valueToStore);
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        window.localStorage.setItem(key, JSON.stringify(storedValue));
       } catch (error) {
         console.log(error);
       }
-    },
-    [key, storedValue]
-  );
+    }
+  }, [key, storedValue]);
 
-
-  return [storedValue, setValue];
+  return [storedValue, setStoredValue];
 }
 
 export default useLocalStorage;
