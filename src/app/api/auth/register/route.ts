@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { app } from '@/lib/firebase/client';
+
+const auth = getAuth(app);
 
 export async function POST(request: Request) {
   try {
@@ -12,31 +15,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
     }
 
-    const photoUrl = `https://picsum.photos/seed/${email}/200/200`;
+    // Use o client SDK para criar o usuário
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-    const userRecord = await adminAuth.createUser({
-      email,
-      password,
+    // Defina o nome e a foto do perfil
+    const photoUrl = `https://picsum.photos/seed/${email}/200/200`;
+    await updateProfile(user, {
       displayName: name,
       photoURL: photoUrl,
     });
     
-    // Opcional: Salvar dados adicionais no Firestore se necessário.
-    // Por exemplo, em uma coleção 'users'.
-    // await db.collection('users').doc(userRecord.uid).set({ name, email, photoUrl });
-
     const newUser = {
-        id: userRecord.uid,
-        name: userRecord.displayName || name,
-        email: userRecord.email,
-        photoUrl: userRecord.photoURL || photoUrl,
+        id: user.uid,
+        name: user.displayName || name,
+        email: user.email,
+        photoUrl: user.photoURL || photoUrl,
     };
 
     return NextResponse.json(newUser, { status: 201 });
 
   } catch (error: any) {
     console.error('Register API Error:', error);
-    if (error.code === 'auth/email-already-exists') {
+    if (error.code === 'auth/email-already-in-use') {
         return NextResponse.json({ message: 'Este e-mail já está em uso.' }, { status: 409 });
     }
     return NextResponse.json({ message: 'Ocorreu um erro no servidor.' }, { status: 500 });
