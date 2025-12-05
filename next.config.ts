@@ -30,6 +30,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverComponentsExternalPackages: ['@firebase/auth'],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@firebase/auth': '@firebase/auth/dist/node-esm/index.js',
+      }
+    }
+    return config
+  },
 };
 
 export default nextConfig;
