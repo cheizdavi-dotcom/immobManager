@@ -37,7 +37,8 @@ export default function CorretoresPage() {
             savedCorretor = { ...corretorData, id, userId: user.id };
             setCorretores(prev => prev.map(c => c.id === id ? savedCorretor : c));
         } else {
-            savedCorretor = { ...corretorData, id: crypto.randomUUID(), userId: user.id };
+            const photoUrl = corretorData.photoUrl || `https://i.pravatar.cc/150?u=${corretorData.name.replace(/\s/g, '')}`;
+            savedCorretor = { ...corretorData, photoUrl, id: crypto.randomUUID(), userId: user.id };
             setCorretores(prev => [...prev, savedCorretor]);
         }
         
@@ -93,6 +94,18 @@ export default function CorretoresPage() {
   }
 
   const renderContent = () => {
+     if (!user?.id) {
+        return (
+            <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+                <Users className="h-16 w-16 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Sessão Inválida</h2>
+                <p className="text-muted-foreground">
+                    Faça o login novamente para gerenciar seus corretores.
+                </p>
+           </div>
+        )
+    }
+
     if (corretores.length === 0) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
@@ -188,13 +201,23 @@ export default function CorretoresPage() {
             <h1 className="text-2xl font-bold tracking-tight">Gestão de Corretores</h1>
             <p className="text-muted-foreground">Cadastre e gerencie sua equipe de corretores.</p>
         </div>
-        <Button onClick={handleOpenNewDialog} disabled={!user?.id}>Novo Corretor</Button>
+         <NewCorretorDialog 
+            onCorretorSubmit={handleAddOrUpdateCorretor}
+            corretor={null}
+            isOpen={isNewCorretorDialogOpen}
+            onOpenChange={(isOpen) => {
+              setIsNewCorretorDialogOpen(isOpen);
+              if (!isOpen) setEditingCorretor(null);
+            }}
+        >
+          <Button onClick={handleOpenNewDialog} disabled={!user?.id}>Novo Corretor</Button>
+        </NewCorretorDialog>
       </div>
 
       <NewCorretorDialog 
         onCorretorSubmit={handleAddOrUpdateCorretor}
         corretor={editingCorretor}
-        isOpen={isNewCorretorDialogOpen}
+        isOpen={isNewCorretorDialogOpen && !!editingCorretor}
         onOpenChange={(isOpen) => {
           setIsNewCorretorDialogOpen(isOpen);
           if (!isOpen) setEditingCorretor(null);

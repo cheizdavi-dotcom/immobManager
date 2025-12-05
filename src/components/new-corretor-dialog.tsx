@@ -83,16 +83,9 @@ export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen, o
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {!isEditing && (
-         <DialogTrigger asChild>
-            {children || (
-                <Button>
-                    <PlusCircle className="mr-2" />
-                    Novo Corretor
-                </Button>
-            )}
-         </DialogTrigger>
-      )}
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Corretor' : 'Cadastrar Novo Corretor'}</DialogTitle>
@@ -129,7 +122,7 @@ export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen, o
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting || !isDirty}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Salvando...' : 'Salvar'}
+              {isSubmitting ? (isEditing ? 'Salvando...' : 'Cadastrando...') : (isEditing ? 'Salvar Alterações' : 'Cadastrar Corretor')}
             </Button>
           </DialogFooter>
         </form>
