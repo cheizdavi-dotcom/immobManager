@@ -6,24 +6,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // A user can only manage their own profile
     match /users/{userId} {
       allow read, update, delete: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn();
     }
 
-    match /clients/{clientId} {
+    // Any user-specific collection can only be accessed by the owner
+    match /clients/{docId} {
       allow read, list: if isSignedIn() && request.query.where.get("userId", "") == request.auth.uid;
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
-    match /corretores/{corretorId} {
+    match /corretores/{docId} {
       allow read, list: if isSignedIn() && request.query.where.get("userId", "") == request.auth.uid;
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
-    match /developments/{developmentId} {
+    match /developments/{docId} {
       allow read, list: if isSignedIn() && request.query.where.get("userId", "") == request.auth.uid;
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
-    match /sales/{saleId} {
+    match /sales/{docId} {
       allow read, list: if isSignedIn() && request.query.where.get("userId", "") == request.auth.uid;
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }

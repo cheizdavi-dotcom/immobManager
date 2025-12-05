@@ -77,9 +77,10 @@ export function useDoc<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // If the doc ref is null/undefined (e.g., waiting for user), don't fetch.
     if (!memoizedDocRef) {
       setData(null);
-      setIsLoading(false);
+      setIsLoading(false); // Not loading because we are not fetching.
       setError(null);
       return;
     }
@@ -117,10 +118,6 @@ export function useDoc<T = any>(
 
     return () => unsubscribe();
   }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
-
-  if(memoizedDocRef && !memoizedDocRef.__memo) {
-    console.warn('The document reference passed to useDoc was not memoized with useMemoFirebase. This can cause performance issues and infinite loops.', memoizedDocRef);
-  }
 
   return { data, isLoading, error, setData };
 }

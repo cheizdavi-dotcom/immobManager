@@ -92,9 +92,10 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // If the query is null/undefined (e.g., waiting for user), don't fetch.
     if (!memoizedTargetRefOrQuery) {
       setData(null);
-      setIsLoading(false);
+      setIsLoading(false); // Not loading because we are not fetching.
       setError(null);
       return;
     }
@@ -139,8 +140,5 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
   
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    console.warn('The query/reference passed to useCollection was not memoized with useMemoFirebase. This can cause performance issues and infinite loops.', memoizedTargetRefOrQuery);
-  }
   return { data, isLoading, error, setData };
 }

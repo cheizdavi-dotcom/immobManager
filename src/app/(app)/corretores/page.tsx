@@ -83,7 +83,7 @@ export default function CorretoresPage() {
     return { totalVendido, vendasRealizadas };
   }
 
-  const isLoading = isUserLoading || isLoadingCorretores || isLoadingSales;
+  const isLoading = isUserLoading || (corretoresQuery && isLoadingCorretores) || (salesQuery && isLoadingSales);
 
   if (isLoading) {
     return (

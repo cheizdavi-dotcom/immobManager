@@ -135,7 +135,11 @@ export default function VendasPage() {
     }, {} as Record<string, Corretor>);
   }, [corretoresData]);
 
-  const isLoading = isUserLoading || isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
+  const isLoading = isUserLoading || 
+                    (salesQuery && isLoadingSales) ||
+                    (corretoresQuery && isLoadingCorretores) ||
+                    (clientsQuery && isLoadingClients) ||
+                    (developmentsQuery && isLoadingDevs);
 
   const addOrUpdateClient = (client: Client) => {
     if (!firestore || !user?.uid) return;

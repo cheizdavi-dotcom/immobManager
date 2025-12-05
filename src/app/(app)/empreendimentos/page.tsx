@@ -31,7 +31,7 @@ export default function EmpreendimentosPage() {
 
   const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
-  const isLoading = isUserLoading || isLoadingDevs;
+  const isLoading = isUserLoading || (developmentsQuery && isLoadingDevs);
 
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

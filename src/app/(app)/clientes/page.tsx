@@ -43,7 +43,7 @@ export default function ClientesPage() {
 
   const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
   
-  const isLoading = isUserLoading || isLoadingClients;
+  const isLoading = isUserLoading || (clientsQuery && isLoadingClients);
 
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

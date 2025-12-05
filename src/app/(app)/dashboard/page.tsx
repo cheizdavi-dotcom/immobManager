@@ -41,7 +41,11 @@ export default function DashboardPage() {
     }, [user?.uid, firestore]);
     const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
-    const isLoading = isUserLoading || isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
+    const isLoading = isUserLoading || 
+                      (salesQuery && isLoadingSales) || 
+                      (corretoresQuery && isLoadingCorretores) || 
+                      (clientsQuery && isLoadingClients) || 
+                      (developmentsQuery && isLoadingDevs);
 
     const {
         faturamentoVendasPagas,
