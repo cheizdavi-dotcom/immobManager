@@ -33,7 +33,7 @@ export default function SettingsPage() {
             
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'backup_immobmanager.json';
+            a.download = 'backup_imobiliaria.json';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -41,7 +41,7 @@ export default function SettingsPage() {
             
             toast({
                 title: "Exportação Concluída!",
-                description: "Seu arquivo 'backup_immobmanager.json' foi baixado.",
+                description: "Seu arquivo 'backup_imobiliaria.json' foi baixado.",
             });
 
         } catch (error) {
