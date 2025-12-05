@@ -505,3 +505,5 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     </Dialog>
   );
 }
+
+    

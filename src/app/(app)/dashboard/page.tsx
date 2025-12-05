@@ -145,6 +145,20 @@ export default function DashboardPage() {
     }, [developmentsData]);
 
 
+    if (!user) {
+         return (
+            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
+                 <div className="flex flex-col items-center gap-2">
+                    <TrendingUp className="h-16 w-16 text-muted-foreground" />
+                    <h2 className="text-2xl font-semibold">Carregando Dashboard...</h2>
+                    <p className="max-w-md text-muted-foreground">
+                        Fazendo login e buscando seus dados.
+                    </p>
+                </div>
+            </main>
+        );
+    }
+    
     if (sales.length === 0) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
@@ -213,5 +227,7 @@ export default function DashboardPage() {
         </main>
     );
 }
+
+    
 
     

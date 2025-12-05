@@ -6,17 +6,16 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { NewCorretorDialog } from '@/components/new-corretor-dialog';
 import type { Corretor, Sale, User } from '@/lib/types';
 import { formatCurrency, safeParseFloat } from '@/lib/utils';
-import { sales as initialSalesData } from '@/lib/data';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-
+import { sales as initialSalesData, corretores as initialCorretoresData } from '@/lib/data';
 
 export default function CorretoresPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', []);
+  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretoresData);
   const [sales] = useLocalStorage<Sale[]>('sales', initialSalesData);
   const [editingCorretor, setEditingCorretor] = useState<Corretor | null>(null);
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
@@ -206,7 +205,7 @@ export default function CorretoresPage() {
          <NewCorretorDialog 
             onCorretorSubmit={handleAddOrUpdateCorretor}
             corretor={null}
-            isOpen={isNewCorretorDialogOpen}
+            isOpen={isNewCorretorDialogOpen && !editingCorretor}
             onOpenChange={(isOpen) => {
               setIsNewCorretorDialogOpen(isOpen);
               if (!isOpen) setEditingCorretor(null);
@@ -239,5 +238,7 @@ export default function CorretoresPage() {
     </main>
   );
 }
+
+    
 
     
