@@ -24,12 +24,10 @@ export function parseCurrency(value: string | number): number {
     if (typeof value !== 'string' || value.trim() === '') {
         return 0;
     }
-    // Remove tudo que não for dígito
-    const onlyDigits = value.replace(/\D/g, '');
+    const onlyDigits = value.replace(/[^\d]/g, '');
     if (onlyDigits.length === 0) {
         return 0;
     }
-    // Converte para centavos e depois para reais
     const number = parseInt(onlyDigits, 10) / 100;
     return isNaN(number) ? 0 : number;
 }
@@ -38,3 +36,12 @@ export function parseCurrency(value: string | number): number {
 export function differenceInDays(dateLeft: Date, dateRight: Date): number {
   return dfnsDifferenceInDays(dateLeft, dateRight);
 }
+
+export const safeParseFloat = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  // Remove R$, pontos e espaços, troca vírgula por ponto
+  const clean = val.toString().replace(/[^\d,.-]/g, '').replace(',', '.');
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
+};

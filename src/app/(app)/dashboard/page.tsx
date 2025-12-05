@@ -5,7 +5,7 @@ import { clients as initialClients, sales as initialSalesData, developments as i
 import { useMemo, useEffect } from 'react';
 import { KpiCard } from '@/components/kpi-card';
 import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, safeParseFloat } from '@/lib/utils';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
 import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
@@ -53,16 +53,16 @@ export default function DashboardPage() {
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
-        const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
-        const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
+        const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + safeParseFloat(s.saleValue), 0);
+        const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + safeParseFloat(s.saleValue), 0);
         
         const comissoesPagas = completedSales
             .filter(s => s.commissionStatus === 'Pago')
-            .reduce((acc, s) => acc + (s.commission || 0), 0);
+            .reduce((acc, s) => acc + safeParseFloat(s.commission), 0);
 
         const comissoesPendentes = activeSales
             .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc, s) => acc + (s.commission || 0), 0);
+            .reduce((acc, s) => acc + safeParseFloat(s.commission), 0);
         
         const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
@@ -78,7 +78,7 @@ export default function DashboardPage() {
                 if (!acc[sale.corretorId]) {
                     acc[sale.corretorId] = 0;
                 }
-                acc[sale.corretorId] += (sale.saleValue || 0);
+                acc[sale.corretorId] += safeParseFloat(sale.saleValue);
                 return acc;
         }, {} as Record<string, number>);
 
@@ -100,7 +100,7 @@ export default function DashboardPage() {
                 if (!acc[builder]) {
                     acc[builder] = { name: builder, value: 0 };
                 }
-                acc[builder].value += (sale.saleValue || 0);
+                acc[builder].value += safeParseFloat(sale.saleValue);
                 return acc;
         }, {} as Record<string, {name: string, value: number}>);
 

@@ -38,6 +38,11 @@ export default function ClientesPage() {
 
 
   const handleAddOrUpdateClient = async (clientFormData: Omit<Client, 'id' | 'userId'>, id?: string) => {
+    // Prevent action if user is not logged in
+    if (!user?.id) {
+       toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Você precisa estar logado para gerenciar clientes.' });
+       return null;
+    }
     try {
         let savedClient: Client;
         if (id) {
@@ -60,6 +65,7 @@ export default function ClientesPage() {
   };
 
   const handleDeleteClient = (clientId: string) => {
+    if (!user?.id) return;
     // TODO: Add logic to check if client is associated with a sale before deleting
     setClients((prev) => prev.filter((c) => c.id !== clientId));
      toast({
