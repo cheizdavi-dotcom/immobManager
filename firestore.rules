@@ -11,25 +11,25 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, update, delete: if isOwner(userId);
+      allow read, update, delete: if isSignedIn() && isOwner(userId);
       allow create: if isSignedIn();
     }
 
     match /clients/{clientId} {
-      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     match /corretores/{corretorId} {
-      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     match /developments/{developmentId} {
-      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     match /sales/{saleId} {
-      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
   }
 }
