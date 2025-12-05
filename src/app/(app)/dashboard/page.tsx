@@ -15,10 +15,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
     const [user] = useLocalStorage<User | null>('user', null);
-    const [sales] = useLocalStorage<Sale[]>('sales', initialSalesData);
-    const [corretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
-    const [clientsData] = useLocalStorage<Client[]>('clients', initialClients);
-    const [developmentsData] = useLocalStorage<Development[]>('developments', initialDevelopments);
+    const [allSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+    const [allCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+    const [allClients] = useLocalStorage<Client[]>('clients', initialClients);
+    const [allDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -31,6 +31,26 @@ export default function DashboardPage() {
             localStorage.removeItem('showLoginSuccessToast');
         }
     }, [toast]);
+
+    const sales = useMemo(() => {
+      if (!user) return [];
+      return allSales.filter(s => s.userId === user.id);
+    }, [allSales, user]);
+
+    const corretoresData = useMemo(() => {
+      if (!user) return [];
+      return allCorretores.filter(c => c.userId === user.id);
+    }, [allCorretores, user]);
+
+    const clientsData = useMemo(() => {
+      if (!user) return [];
+      return allClients.filter(c => c.userId === user.id);
+    }, [allClients, user]);
+
+    const developmentsData = useMemo(() => {
+      if (!user) return [];
+      return allDevelopments.filter(d => d.userId === user.id);
+    }, [allDevelopments, user]);
 
 
     const {

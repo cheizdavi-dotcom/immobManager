@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
@@ -31,14 +31,17 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 
 export default function ClientesPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [clients, setClients] = useLocalStorage<Client[]>('clients', []);
+  const [allClients, setAllClients] = useLocalStorage<Client[]>('clients', []);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const clients = useMemo(() => {
+    if (!user) return [];
+    return allClients.filter(c => c.userId === user.id);
+  }, [allClients, user]);
 
   const handleAddOrUpdateClient = async (clientFormData: Omit<Client, 'id' | 'userId'>, id?: string) => {
-    // Prevent action if user is not logged in
     if (!user?.id) {
        toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Você precisa estar logado para gerenciar clientes.' });
        return null;
@@ -46,11 +49,11 @@ export default function ClientesPage() {
     try {
         let savedClient: Client;
         if (id) {
-            savedClient = { ...clientFormData, id, userId: user!.id };
-            setClients(prev => prev.map(c => c.id === id ? savedClient : c));
+            savedClient = { ...clientFormData, id, userId: user.id };
+            setAllClients(prev => prev.map(c => c.id === id ? savedClient : c));
         } else {
-            savedClient = { ...clientFormData, id: crypto.randomUUID(), userId: user!.id };
-            setClients(prev => [...prev, savedClient]);
+            savedClient = { ...clientFormData, id: crypto.randomUUID(), userId: user.id };
+            setAllClients(prev => [...prev, savedClient]);
         }
         
         toast({
@@ -66,8 +69,7 @@ export default function ClientesPage() {
 
   const handleDeleteClient = (clientId: string) => {
     if (!user?.id) return;
-    // TODO: Add logic to check if client is associated with a sale before deleting
-    setClients((prev) => prev.filter((c) => c.id !== clientId));
+    setAllClients((prev) => prev.filter((c) => c.id !== clientId));
      toast({
         title: 'Cliente Excluído!',
         description: 'O cliente foi removido da sua lista.',

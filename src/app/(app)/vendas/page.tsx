@@ -27,10 +27,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function VendasPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [sales, setSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
-  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
-  const [clients, setClients] = useLocalStorage<Client[]>('clients', initialClients);
-  const [developments, setDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
+  const [allSales, setAllSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+  const [allCorretores, setAllCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+  const [allClients, setAllClients] = useLocalStorage<Client[]>('clients', initialClients);
+  const [allDevelopments, setAllDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,15 +38,40 @@ export default function VendasPage() {
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
 
+  const sales = useMemo(() => {
+    if (!user) return [];
+    return allSales.filter(s => s.userId === user.id);
+  }, [allSales, user]);
+
+  const corretores = useMemo(() => {
+    if (!user) return [];
+    return allCorretores.filter(c => c.userId === user.id);
+  }, [allCorretores, user]);
+
+  const clients = useMemo(() => {
+    if (!user) return [];
+    return allClients.filter(c => c.userId === user.id);
+  }, [allClients, user]);
+
+  const developments = useMemo(() => {
+    if (!user) return [];
+    return allDevelopments.filter(d => d.userId === user.id);
+  }, [allDevelopments, user]);
+
   const handleAddOrUpdateSale = async (saleData: Omit<Sale, 'id' | 'userId' | 'commissionStatus'>, id?: string) => {
+    if (!user?.id) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
+        return null;
+    }
     try {
         let savedSale: Sale;
         if (id) {
-            savedSale = { ...saleData, id, userId: user!.id, commissionStatus: sales.find(s => s.id === id)?.commissionStatus || 'Pendente' };
-            setSales(prev => prev.map(s => s.id === id ? savedSale : s));
+            const existingSale = allSales.find(s => s.id === id);
+            savedSale = { ...saleData, id, userId: user.id, commissionStatus: existingSale?.commissionStatus || 'Pendente' };
+            setAllSales(prev => prev.map(s => s.id === id ? savedSale : s));
         } else {
-            savedSale = { ...saleData, id: crypto.randomUUID(), userId: user!.id, commissionStatus: 'Pendente' };
-            setSales(prev => [...prev, savedSale]);
+            savedSale = { ...saleData, id: crypto.randomUUID(), userId: user.id, commissionStatus: 'Pendente' };
+            setAllSales(prev => [...prev, savedSale]);
         }
         
         toast({
@@ -61,7 +86,7 @@ export default function VendasPage() {
   };
 
   const handleDeleteSale = (saleId: string) => {
-     setSales((prev) => prev.filter((s) => s.id !== saleId));
+     setAllSales((prev) => prev.filter((s) => s.id !== saleId));
      toast({
         title: 'Venda Excluída!',
         description: 'A venda foi removida com sucesso.',
@@ -69,15 +94,17 @@ export default function VendasPage() {
   }
 
   const handleClientSubmit = async (clientData: Omit<Client, 'id' | 'userId'>) => {
-    const newClient = { ...clientData, id: crypto.randomUUID(), userId: user!.id };
-    setClients(prev => [...prev, newClient]);
+    if (!user?.id) return null;
+    const newClient = { ...clientData, id: crypto.randomUUID(), userId: user.id };
+    setAllClients(prev => [...prev, newClient]);
     toast({ title: 'Cliente Criado!', description: `${newClient.name} foi adicionado.` });
     return newClient;
   }
 
   const handleDevelopmentSubmit = async (devData: Omit<Development, 'id' | 'userId'>) => {
-    const newDev = { ...devData, id: crypto.randomUUID(), userId: user!.id };
-    setDevelopments(prev => [...prev, newDev]);
+    if (!user?.id) return null;
+    const newDev = { ...devData, id: crypto.randomUUID(), userId: user.id };
+    setAllDevelopments(prev => [...prev, newDev]);
     toast({ title: 'Empreendimento Criado!', description: `${newDev.name} foi adicionado.` });
     return newDev;
   }

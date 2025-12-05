@@ -15,13 +15,23 @@ import { sales as initialSalesData, corretores as initialCorretoresData } from '
 
 export default function CorretoresPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretoresData);
-  const [sales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+  const [allCorretores, setAllCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretoresData);
+  const [allSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
   const [editingCorretor, setEditingCorretor] = useState<Corretor | null>(null);
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [selectedCorretor, setSelectedCorretor] = useState<Corretor | null>(null);
   const { toast } = useToast();
+
+  const corretores = useMemo(() => {
+    if (!user) return [];
+    return allCorretores.filter(c => c.userId === user.id);
+  }, [allCorretores, user]);
+
+  const sales = useMemo(() => {
+    if (!user) return [];
+    return allSales.filter(s => s.userId === user.id);
+  }, [allSales, user]);
 
 
   const handleAddOrUpdateCorretor = async (corretorData: Omit<Corretor, 'id' | 'userId'>, id?: string) => {
@@ -34,11 +44,11 @@ export default function CorretoresPage() {
         let savedCorretor: Corretor;
         if (id) {
             savedCorretor = { ...corretorData, id, userId: user.id };
-            setCorretores(prev => prev.map(c => c.id === id ? savedCorretor : c));
+            setAllCorretores(prev => prev.map(c => c.id === id ? savedCorretor : c));
         } else {
             const photoUrl = corretorData.photoUrl || `https://i.pravatar.cc/150?u=${corretorData.name.replace(/\s/g, '')}`;
             savedCorretor = { ...corretorData, photoUrl, id: crypto.randomUUID(), userId: user.id };
-            setCorretores(prev => [...prev, savedCorretor]);
+            setAllCorretores(prev => [...prev, savedCorretor]);
         }
         
         toast({
@@ -63,7 +73,7 @@ export default function CorretoresPage() {
         return;
     }
 
-    setCorretores((prev) => prev.filter((c) => c.id !== corretorId));
+    setAllCorretores((prev) => prev.filter((c) => c.id !== corretorId));
     toast({
         title: 'Corretor Excluído!',
         description: 'O corretor foi removido da sua equipe.',

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
@@ -20,20 +20,29 @@ import {developments as initialDevelopments} from '@/lib/data';
 
 export default function EmpreendimentosPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [developments, setDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
+  const [allDevelopments, setAllDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const developments = useMemo(() => {
+    if (!user) return [];
+    return allDevelopments.filter(d => d.userId === user.id);
+  }, [allDevelopments, user]);
+
   const handleAddOrUpdateDevelopment = async (devData: Omit<Development, 'id' | 'userId'>, id?: string) => {
+    if (!user?.id) {
+       toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Você precisa estar logado para gerenciar empreendimentos.' });
+       return null;
+    }
     try {
         let savedDevelopment: Development;
         if (id) {
-            savedDevelopment = { ...devData, id, userId: user!.id };
-            setDevelopments(prev => prev.map(d => d.id === id ? savedDevelopment : d));
+            savedDevelopment = { ...devData, id, userId: user.id };
+            setAllDevelopments(prev => prev.map(d => d.id === id ? savedDevelopment : d));
         } else {
-            savedDevelopment = { ...devData, id: crypto.randomUUID(), userId: user!.id };
-            setDevelopments(prev => [...prev, savedDevelopment]);
+            savedDevelopment = { ...devData, id: crypto.randomUUID(), userId: user.id };
+            setAllDevelopments(prev => [...prev, savedDevelopment]);
         }
         
         toast({
@@ -49,7 +58,7 @@ export default function EmpreendimentosPage() {
 
   const deleteDevelopment = (developmentId: string) => {
     // TODO: Add logic to check if development is associated with a sale before deleting
-    setDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
+    setAllDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
     toast({
         title: 'Empreendimento Excluído!',
         description: 'O empreendimento foi removido da sua lista.',
@@ -72,6 +81,18 @@ export default function EmpreendimentosPage() {
   }
 
   const renderContent = () => {
+    if (!user?.id) {
+        return (
+            <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+                <Building className="h-16 w-16 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Sessão Inválida</h2>
+                <p className="text-muted-foreground">
+                    Faça o login novamente para gerenciar seus empreendimentos.
+                </p>
+           </div>
+        )
+    }
+
     if (developments.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">

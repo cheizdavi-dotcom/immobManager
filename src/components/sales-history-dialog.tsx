@@ -8,13 +8,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Sale, Corretor, Client, Development } from '@/lib/types';
+import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { clients as initialClients, developments as initialDevelopments } from '@/lib/data';
+import { useMemo } from 'react';
 
 type SalesHistoryDialogProps = {
     isOpen: boolean;
@@ -38,8 +39,20 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
 
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
-    const [clients] = useLocalStorage<Client[]>('clients', initialClients);
-    const [developments] = useLocalStorage<Development[]>('developments', initialDevelopments);
+    const [user] = useLocalStorage<User | null>('user', null);
+    const [allClients] = useLocalStorage<Client[]>('clients', initialClients);
+    const [allDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
+
+    const clients = useMemo(() => {
+        if (!user) return [];
+        return allClients.filter(c => c.userId === user.id);
+    }, [allClients, user]);
+
+    const developments = useMemo(() => {
+        if (!user) return [];
+        return allDevelopments.filter(d => d.userId === user.id);
+    }, [allDevelopments, user]);
+
 
   if (!corretor) return null;
 

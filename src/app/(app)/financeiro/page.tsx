@@ -4,7 +4,7 @@ import { KpiCard } from '@/components/kpi-card';
 import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, CommissionStatus, Client, Development, User } from '@/lib/types';
-import { sales as initialSalesData, corretores as initialCorretoresData, clients, developments } from '@/lib/data';
+import { sales as initialSalesData, corretores as initialCorretoresData, clients as initialClients, developments as initialDevelopments } from '@/lib/data';
 import { formatCurrency, cn, safeParseFloat } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -37,11 +37,32 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 
 export default function FinanceiroPage() {
     const [user] = useLocalStorage<User | null>('user', null);
-    const [sales, setSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
-    const [corretores] = useLocalStorage<Corretor[]>('corretores', initialCorretoresData);
-    const [clientsData] = useLocalStorage<Client[]>('clients', clients);
-    const [developmentsData] = useLocalStorage<Development[]>('developments', developments);
+    const [allSales, setAllSales] = useLocalStorage<Sale[]>('sales', initialSalesData);
+    const [allCorretores] = useLocalStorage<Corretor[]>('corretores', initialCorretoresData);
+    const [allClients] = useLocalStorage<Client[]>('clients', initialClients);
+    const [allDevelopments] = useLocalStorage<Development[]>('developments', initialDevelopments);
     const { toast } = useToast();
+
+    const sales = useMemo(() => {
+        if (!user) return [];
+        return allSales.filter(s => s.userId === user.id);
+    }, [allSales, user]);
+
+    const corretoresMap = useMemo(() => {
+        if (!user) return {};
+        return allCorretores.filter(c => c.userId === user.id).reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>);
+    }, [allCorretores, user]);
+
+    const clientsMap = useMemo(() => {
+        if (!user) return {};
+        return allClients.filter(c => c.userId === user.id).reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>);
+    }, [allClients, user]);
+
+    const developmentsMap = useMemo(() => {
+        if (!user) return {};
+        return allDevelopments.filter(d => d.userId === user.id).reduce((acc, d) => ({ ...acc, [d.id]: d.name }), {} as Record<string, string>);
+    }, [allDevelopments, user]);
+
 
     const financialMetrics = useMemo(() => {
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
@@ -69,12 +90,8 @@ export default function FinanceiroPage() {
             .sort((a, b) => parseISO(b.saleDate).getTime() - parseISO(a.saleDate).getTime());
     }, [sales]);
 
-    const corretoresMap = useMemo(() => corretores.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [corretores]);
-    const clientsMap = useMemo(() => clientsData.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [clientsData]);
-    const developmentsMap = useMemo(() => developmentsData.reduce((acc, d) => ({ ...acc, [d.id]: d.name }), {} as Record<string, string>), [developmentsData]);
-
     const toggleCommissionStatus = (saleId: string) => {
-        setSales(prevSales => {
+        setAllSales(prevSales => {
             const saleToUpdate = prevSales.find(s => s.id === saleId);
             if (!saleToUpdate) return prevSales;
 
@@ -100,6 +117,20 @@ export default function FinanceiroPage() {
 
 
     const renderContent = () => {
+        if (!user) {
+            return (
+                <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
+                    <div className="flex flex-col items-center gap-2">
+                    <Banknote className="h-16 w-16 text-muted-foreground" />
+                    <h2 className="text-2xl font-semibold">Sessão Inválida</h2>
+                    <p className="text-muted-foreground">
+                        Faça o login para ver seus dados financeiros.
+                    </p>
+                    </div>
+                </main>
+            );
+        }
+
         if (sales.length === 0) {
             return (
                 <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
