@@ -32,6 +32,7 @@ export default function VendasPage() {
   
   const salesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
+    console.log('Tentando buscar dados para user:', user?.uid);
     return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
   const { data: salesData, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);

@@ -45,6 +45,7 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
 
     const clientsQuery = useMemoFirebase(() => {
       if (!firestore || !user?.uid) return null;
+      console.log('Tentando buscar dados para user:', user?.uid);
       return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: clientsData } = useCollection<Client>(clientsQuery);

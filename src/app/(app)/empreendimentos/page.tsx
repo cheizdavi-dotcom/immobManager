@@ -26,6 +26,7 @@ export default function EmpreendimentosPage() {
 
   const developmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
+    console.log('Tentando buscar dados para user:', user?.uid);
     return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 

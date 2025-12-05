@@ -22,6 +22,7 @@ export default function CorretoresPage() {
 
   const corretoresQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
+    console.log('Tentando buscar dados para user:', user?.uid);
     return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
