@@ -31,8 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useUser } from '../../firebase/auth/use-user';
-import { useAuth } from '../../firebase/provider';
+import { useUser, useAuth } from '../firebase';
 import { signOut } from 'firebase/auth';
 
 
@@ -141,7 +140,7 @@ export function AppSidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </Footer>
+      </SidebarFooter>
     </>
   );
 }
