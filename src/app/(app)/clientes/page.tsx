@@ -45,48 +45,57 @@ export default function ClientesPage() {
         .then(data => setClients(data))
         .catch(err => {
             console.error(err);
-            toast({ variant: 'destructive', title: 'Erro ao buscar clientes.'});
+            toast({ variant: 'destructive', title: 'Erro ao buscar clientes.', description: err.message });
         })
         .finally(() => setIsLoading(false));
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
-  const handleAddOrUpdateClient = async (client: Omit<Client, 'id' | 'userId'>, id?: string) => {
+  const handleAddOrUpdateClient = async (clientFormData: Omit<Client, 'id' | 'userId'>, id?: string) => {
     if (!user?.id) {
-        toast({ variant: 'destructive', title: 'Usuário não autenticado.' });
-        return;
+        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
+        return null;
     }
     
     try {
-        const savedClient = await addOrUpdateClient(client, user.id, id);
+        const savedClient = await addOrUpdateClient(clientFormData, user.id, id);
+        
         setClients((prevClients) => {
-            const existingClient = prevClients.find((c) => c.id === savedClient.id);
-            if (existingClient) {
-                return prevClients.map((c) => (c.id === savedClient.id ? savedClient : c));
+            if (id) {
+                // Atualizando um cliente existente
+                return prevClients.map((c) => (c.id === id ? savedClient : c));
+            } else {
+                // Adicionando um novo cliente no início da lista
+                return [savedClient, ...prevClients];
             }
-            return [...prevClients, savedClient];
         });
+
         toast({
             title: id ? 'Cliente Atualizado!' : 'Cliente Cadastrado!',
             description: `${savedClient.name} foi salvo com sucesso.`,
         });
-        return savedClient;
-    } catch(err) {
-        toast({ variant: 'destructive', title: 'Erro ao salvar cliente.' });
-        return null;
+        return savedClient; // Retorna o cliente salvo para fechar o modal
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Erro ao salvar cliente.', description: err.message });
+        return null; // Retorna null em caso de erro
     }
   };
 
   const handleDeleteClient = async (clientId: string) => {
+    if (!user?.id) {
+        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
+        return;
+    }
+
     try {
-        await deleteClientAction(clientId);
+        await deleteClientAction(clientId, user.id);
         setClients((prev) => prev.filter((c) => c.id !== clientId));
         toast({
             title: 'Cliente Excluído!',
             description: 'O cliente foi removido da sua lista.',
         });
-    } catch(err) {
-        toast({ variant: 'destructive', title: 'Erro ao excluir cliente.' });
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Erro ao excluir cliente.', description: err.message });
     }
   };
 

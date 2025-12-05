@@ -40,7 +40,7 @@ export async function addOrUpdateClient(
   clientId?: string
 ): Promise<Client> {
    if (!userId) {
-    throw new Error('Usuário não autenticado.');
+    throw new Error('Usuário não autenticado. Ação não permitida.');
   }
   
   const id = clientId || randomUUID();
@@ -61,13 +61,18 @@ export async function addOrUpdateClient(
     } else {
       // Inserir novo cliente
       const stmt = db.prepare(
-        'INSERT INTO clients (id, userId, name, phone, cpf, status) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO clients (id, userId, name, phone, cpf, status, created_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)'
       );
       stmt.run(id, userId, finalClient.name, finalClient.phone, finalClient.cpf, finalClient.status);
     }
     
     revalidatePath('/(app)/clientes');
-    return finalClient;
+    
+    // Retorna o cliente que foi efetivamente salvo, com todos os campos.
+    const getSavedClient = db.prepare('SELECT * FROM clients WHERE id = ?');
+    const savedClient = getSavedClient.get(id) as Client;
+
+    return savedClient;
 
   } catch (error) {
     console.error('Falha ao salvar cliente:', error);
@@ -80,20 +85,23 @@ export async function addOrUpdateClient(
  * @param clientId - O ID do cliente a ser excluído.
  * @returns Uma promessa que resolve quando a operação é concluída.
  */
-export async function deleteClient(clientId: string): Promise<void> {
+export async function deleteClient(clientId: string, userId: string): Promise<void> {
     if (!clientId) {
         throw new Error('ID do cliente não fornecido.');
+    }
+    if (!userId) {
+        throw new Error('Usuário não autenticado. Ação não permitida.');
     }
 
     // TODO: Adicionar lógica para verificar se o cliente está associado a uma venda
 
     try {
-        const stmt = db.prepare('DELETE FROM clients WHERE id = ?');
-        const result = stmt.run(clientId);
+        const stmt = db.prepare('DELETE FROM clients WHERE id = ? AND userId = ?');
+        const result = stmt.run(clientId, userId);
 
         if (result.changes === 0) {
-            // Isso pode acontecer se o cliente não existir ou se houver uma falha de permissão (não aplicável aqui, mas bom saber)
-            throw new Error('Cliente não encontrado ou já excluído.');
+            // Isso pode acontecer se o cliente não existir ou se pertencer a outro usuário.
+            throw new Error('Cliente não encontrado ou você não tem permissão para excluí-lo.');
         }
 
         revalidatePath('/(app)/clientes');

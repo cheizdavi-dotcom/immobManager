@@ -56,7 +56,7 @@ export function NewClientDialog({
     register,
     handleSubmit,
     control,
-    formState: { errors },
+    formState: { errors, isDirty },
     reset,
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -73,8 +73,8 @@ export function NewClientDialog({
       if (isEditing && client) {
         reset({
           name: client.name,
-          phone: client.phone,
-          cpf: client.cpf,
+          phone: client.phone || '',
+          cpf: client.cpf || '',
           status: client.status
         });
       } else {
@@ -147,7 +147,7 @@ export function NewClientDialog({
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isDirty}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSubmitting ? (isEditing ? 'Salvando...' : 'Cadastrando...') : (isEditing ? 'Salvar Alterações' : 'Salvar Cliente')}
             </Button>
