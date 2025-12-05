@@ -10,22 +10,24 @@ import {
 } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import useLocalStorage from '@/hooks/useLocalStorage';
+import { useUser } from '../../firebase/auth/use-user';
+import { Loader } from 'lucide-react';
+
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const [isAuthenticated] = useLocalStorage('isAuthenticated', false);
+  const { data: user, isLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !user) {
       router.replace('/auth');
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, user, router]);
 
-  if (!isAuthenticated) {
+  if (isLoading || !user) {
     return (
         <div className="flex h-screen w-screen items-center justify-center">
-            <p>Redirecionando...</p>
+            <Loader className="h-8 w-8 animate-spin text-primary" />
         </div>
     );
   }

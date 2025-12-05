@@ -31,8 +31,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import useLocalStorage from '@/hooks/useLocalStorage';
+import { useUser } from '../../firebase/auth/use-user';
+import { useAuth } from '../../firebase/provider';
+import { signOut } from 'firebase/auth';
+
 
 const menuItems = [
   {
@@ -67,21 +69,22 @@ const menuItems = [
   },
 ];
 
-type User = {
-    name: string;
-    email: string;
-}
-
 export function AppSidebar() {
   const pathname = usePathname();
-  const [currentUser] = useLocalStorage<User | null>('currentUser', null);
-  const [, setIsAuthenticated] = useLocalStorage('isAuthenticated', false);
+  const { data: user } = useUser();
+  const auth = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
     router.push('/auth');
   };
+  
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'A';
+    return name.split(' ').map(n => n[0]).slice(0, 2).join('');
+  }
 
   return (
     <>
@@ -116,18 +119,18 @@ export function AppSidebar() {
             <button className="flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-sidebar-accent">
               <div className="flex items-center gap-3 overflow-hidden">
                 <Avatar className="size-8">
-                  <AvatarImage src={PlaceHolderImages[0].imageUrl} alt="User" />
-                  <AvatarFallback>{currentUser?.name?.charAt(0) || currentUser?.email?.charAt(0) || 'A'}</AvatarFallback>
+                  {user?.photoURL && <AvatarImage src={user.photoURL} alt="User" />}
+                  <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
                 </Avatar>
                 <span className="truncate text-sm font-medium">
-                  {currentUser?.name || currentUser?.email || 'Admin'}
+                  {user?.displayName || user?.email || 'Admin'}
                 </span>
               </div>
               <ChevronDown className="size-4 shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" side="top" align="start">
-            <DropdownMenuLabel>{currentUser?.email || 'Minha Conta'}</DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.email || 'Minha Conta'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled>Perfil</DropdownMenuItem>
             <DropdownMenuItem disabled>Configurações</DropdownMenuItem>
@@ -138,7 +141,7 @@ export function AppSidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarFooter>
+      </Footer>
     </>
   );
 }

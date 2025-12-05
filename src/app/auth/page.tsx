@@ -17,7 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import useLocalStorage from '@/hooks/useLocalStorage';
+import { useAuth } from '../../firebase/provider';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+
 
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido.'),
@@ -32,10 +34,7 @@ const registerSchema = z.object({
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [accounts, setAccounts] = useLocalStorage<z.infer<typeof registerSchema>[]>('accounts', []);
-  const [, setIsAuthenticated] = useLocalStorage('isAuthenticated', false);
-  const [, setCurrentUser] = useLocalStorage('currentUser', null);
-
+  const auth = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -49,42 +48,56 @@ export default function AuthPage() {
     defaultValues: { name: '', email: '', password: '' },
   });
 
-  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    const account = accounts.find(
-      (acc) => acc.email === values.email && acc.password === values.password
-    );
-    if (account) {
-      setIsAuthenticated(true);
-      setCurrentUser({ name: account.name, email: account.email });
-      toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
-      router.push('/dashboard');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Falha no login',
-        description: 'E-mail ou senha inválidos.',
-      });
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    if (!auth) return;
+    try {
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
+        router.push('/dashboard');
+    } catch (error: any) {
+        console.error("Firebase Auth Error", error);
+        const errorCode = error.code;
+        let description = 'Ocorreu um erro desconhecido.';
+        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
+            description = 'E-mail ou senha inválidos.';
+        } else if (errorCode === 'auth/too-many-requests') {
+            description = 'Muitas tentativas de login. Tente novamente mais tarde.';
+        }
+        toast({
+            variant: 'destructive',
+            title: 'Falha no login',
+            description,
+        });
     }
   };
 
-  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
-    const existingAccount = accounts.find((acc) => acc.email === values.email);
-    if (existingAccount) {
+  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
+     if (!auth) return;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      await updateProfile(userCredential.user, { displayName: values.name });
+
       toast({
-        variant: 'destructive',
-        title: 'Falha no cadastro',
-        description: 'Este e-mail já está em uso.',
+        title: 'Cadastro realizado com sucesso!',
+        description: 'Você já pode fazer o login.',
       });
-      return;
+      loginForm.setValue('email', values.email);
+      loginForm.setValue('password', '');
+      setIsLogin(true);
+      registerForm.reset();
+    } catch (error: any) {
+        console.error("Firebase Auth Error", error);
+        const errorCode = error.code;
+        let description = 'Ocorreu um erro desconhecido.';
+        if (errorCode === 'auth/email-already-in-use') {
+            description = 'Este e-mail já está em uso.';
+        }
+        toast({
+            variant: 'destructive',
+            title: 'Falha no cadastro',
+            description: description,
+        });
     }
-    setAccounts([...accounts, values]);
-    toast({
-      title: 'Cadastro realizado com sucesso!',
-      description: 'Você já pode fazer o login.',
-    });
-    loginForm.setValue('email', values.email);
-    setIsLogin(true);
-    registerForm.reset();
   };
 
   return (
