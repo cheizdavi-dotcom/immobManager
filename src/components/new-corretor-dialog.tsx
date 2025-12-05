@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, User, Loader2 } from 'lucide-react';
+import { PlusCircle, User, Loader2, Upload } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -39,6 +39,8 @@ type NewCorretorDialogProps = {
 export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen, onOpenChange, children }: NewCorretorDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!corretor;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const {
     register,
@@ -81,6 +83,22 @@ export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen, o
     }
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setValue('photoUrl', reader.result as string, { shouldDirty: true });
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -96,16 +114,26 @@ export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen, o
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
           
           <div className="flex flex-col items-center gap-4">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={photoUrl || ''} alt="Preview do corretor" />
-              <AvatarFallback className="bg-muted">
-                <User className="h-12 w-12 text-muted-foreground" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="w-full space-y-2">
-                <Label htmlFor="photoUrl">URL da Foto (opcional)</Label>
-                <Input id="photoUrl" {...register('photoUrl')} placeholder="https://exemplo.com/foto.jpg" disabled={isSubmitting}/>
-            </div>
+            <button type="button" onClick={handleAvatarClick} className="relative group rounded-full">
+                <Avatar className="h-24 w-24">
+                <AvatarImage src={photoUrl || ''} alt="Preview do corretor" />
+                <AvatarFallback className="bg-muted">
+                    <User className="h-12 w-12 text-muted-foreground" />
+                </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Upload className="h-8 w-8 text-white" />
+                </div>
+            </button>
+             <Input
+              id="photo-upload"
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleImageUpload}
+              disabled={isSubmitting}
+            />
           </div>
 
           <div className="space-y-2">
