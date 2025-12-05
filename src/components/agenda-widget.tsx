@@ -26,7 +26,7 @@ export function AgendaWidget({ sales, clientsMap }: AgendaWidgetProps) {
     const today = startOfToday();
     return sales
       .filter((sale) => {
-        if (!sale.combinadoDate) return false;
+        if (!sale.combinadoDate || !sale.combinado) return false;
         try {
             const combinadoDate = parseISO(sale.combinadoDate as unknown as string);
             return combinadoDate >= today;

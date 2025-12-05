@@ -1,7 +1,7 @@
 'use client';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
-import { clients, sales as initialSalesData, developments, corretores } from '@/lib/data';
+import { clients as initialClients, sales as initialSalesData, developments as initialDevelopments, corretores as initialCorretores } from '@/lib/data';
 import { useMemo, useEffect } from 'react';
 import { KpiCard } from '@/components/kpi-card';
 import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
@@ -16,9 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 export default function DashboardPage() {
     const [user] = useLocalStorage<User | null>('user', null);
     const [sales] = useLocalStorage<Sale[]>('sales', initialSalesData);
-    const [corretoresData] = useLocalStorage<Corretor[]>('corretores', corretores);
-    const [clientsData] = useLocalStorage<Client[]>('clients', clients);
-    const [developmentsData] = useLocalStorage<Development[]>('developments', developments);
+    const [corretoresData] = useLocalStorage<Corretor[]>('corretores', initialCorretores);
+    const [clientsData] = useLocalStorage<Client[]>('clients', initialClients);
+    const [developmentsData] = useLocalStorage<Development[]>('developments', initialDevelopments);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -40,13 +40,23 @@ export default function DashboardPage() {
         comissoesPendentes,
         conversionRate,
     } = useMemo(() => {
+        if (!sales || sales.length === 0) {
+          return {
+            faturamentoVendasPagas: 0,
+            vgvPipelineAtivo: 0,
+            comissoesPagas: 0,
+            comissoesPendentes: 0,
+            conversionRate: 0,
+          };
+        }
+        
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         const completedSales = sales.filter(s => s.status === 'Venda Concluída / Paga');
         
         const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
         
-        const comissoesPagas = activeSales
+        const comissoesPagas = completedSales
             .filter(s => s.commissionStatus === 'Pago')
             .reduce((acc, s) => acc + (s.commission || 0), 0);
 
@@ -61,6 +71,7 @@ export default function DashboardPage() {
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {
+        if (!sales || !corretoresData) return [];
         const salesByBroker = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
@@ -81,6 +92,7 @@ export default function DashboardPage() {
     }, [sales, corretoresData]);
 
     const builderMixData = useMemo(() => {
+        if (!sales || !developmentsData) return [];
         const salesByBuilder = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
@@ -92,7 +104,7 @@ export default function DashboardPage() {
                 return acc;
         }, {} as Record<string, {name: string, value: number}>);
 
-        return Object.values(salesByBuilder);
+        return Object.values(salesByBuilder).sort((a,b) => b.value - a.value);
     }, [sales, developmentsData]);
 
     const attentionSales = useMemo(() => {
@@ -104,6 +116,7 @@ export default function DashboardPage() {
     }, [sales]);
 
     const corretoresMap = useMemo(() => {
+        if (!corretoresData) return {};
         return corretoresData.reduce((acc, corretor) => {
             acc[corretor.id] = corretor;
             return acc;
@@ -111,6 +124,7 @@ export default function DashboardPage() {
     }, [corretoresData]);
 
     const clientsMap = useMemo(() => {
+        if (!clientsData) return {};
         return clientsData.reduce((acc, client) => {
             acc[client.id] = client;
             return acc;
@@ -118,6 +132,7 @@ export default function DashboardPage() {
     }, [clientsData]);
 
      const developmentsMap = useMemo(() => {
+        if (!developmentsData) return {};
         return developmentsData.reduce((acc, dev) => {
             acc[dev.id] = dev;
             return acc;

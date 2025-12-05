@@ -22,7 +22,7 @@ type AttentionListProps = {
 
 export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMap }: AttentionListProps) {
   const sortedSales = [...sales].sort(
-    (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+    (a, b) => new Date(a.saleDate).getTime() - new Date(b.saleDate).getTime()
   );
 
   return (
@@ -44,6 +44,8 @@ export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMa
               const daysStopped = differenceInDays(new Date(), saleDate);
               const clientName = clientsMap[sale.clientId]?.name || 'N/A';
               const developmentName = developmentsMap[sale.developmentId]?.name || 'N/A';
+              const corretorName = corretoresMap[sale.corretorId]?.name || 'N/A';
+
               return(
               <div key={sale.id} className="flex items-center gap-4">
                 <Avatar className="hidden h-9 w-9 sm:flex">
@@ -60,7 +62,7 @@ export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMa
                     {clientName}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {corretoresMap[sale.corretorId]?.name || 'N/A'} - {developmentName}
+                    {corretorName} - {developmentName}
                   </p>
                 </div>
                 <div className="ml-auto text-sm font-semibold text-yellow-600">
