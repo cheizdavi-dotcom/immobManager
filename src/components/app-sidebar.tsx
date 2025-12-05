@@ -11,6 +11,7 @@ import {
   LogOut,
   TrendingUp,
   Users,
+  Settings,
 } from 'lucide-react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { User } from '@/lib/types';
@@ -63,6 +64,11 @@ const menuItems = [
     href: '/financeiro',
     label: 'Financeiro',
     icon: Banknote,
+  },
+   {
+    href: '/configuracoes',
+    label: 'Configurações',
+    icon: Settings,
   },
 ];
 
