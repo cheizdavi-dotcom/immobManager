@@ -41,6 +41,7 @@ const saleSchema = z.object({
   corretorId: z.string().min(1, 'Selecione um corretor.'),
   clientId: z.string().min(1, 'O nome do cliente é obrigatório.'),
   developmentId: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
+  construtora: z.string().optional(), // Now optional as it's derived
   saleValue: z.string().refine((val) => safeParseFloat(val) > 0, { message: 'O valor da venda deve ser maior que zero.' }),
   atoValue: z.string(),
   commissionPercentage: z.string().optional().nullable(),
@@ -189,6 +190,8 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
   const onSubmit = async (data: SaleFormValues) => {
     setIsSubmitting(true);
+    const selectedDevelopment = developments.find(d => d.id === data.developmentId);
+    
     const submissionData = {
         ...data,
         saleDate: data.saleDate.toISOString(),
@@ -197,6 +200,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         atoValue: safeParseFloat(data.atoValue),
         commission: safeParseFloat(data.commission),
         commissionPercentage: data.commissionPercentage ? safeParseFloat(data.commissionPercentage) : null,
+        construtora: selectedDevelopment?.construtora || ''
     };
     const result = await onSaleSubmit(submissionData, sale?.id);
     setIsSubmitting(false);
