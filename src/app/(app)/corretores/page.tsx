@@ -47,7 +47,7 @@ export default function CorretoresPage() {
   };
 
   const deleteCorretor = (corretorId: string) => {
-    if (!sales || !firestore || !user?.uid) return;
+    if (!sales || !firestore) return;
     const salesFromCorretor = sales.find(s => s.corretorId === corretorId);
     if(salesFromCorretor){
        toast({
@@ -83,7 +83,9 @@ export default function CorretoresPage() {
     return { totalVendido, vendasRealizadas };
   }
 
-  if (isLoadingCorretores || isLoadingSales) {
+  const isLoading = isLoadingCorretores || isLoadingSales;
+
+  if (isLoading) {
     return (
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex items-center justify-between">

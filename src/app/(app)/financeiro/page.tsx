@@ -45,7 +45,7 @@ export default function FinanceiroPage() {
         if (!firestore || !user?.uid) return null;
         return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
-    const { data: sales, isLoading: isLoadingSales, setData: setSales } = useCollection<Sale>(salesQuery);
+    const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
 
     const corretoresQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
@@ -121,7 +121,7 @@ export default function FinanceiroPage() {
         const newStatus: CommissionStatus = sale.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
         const updatedSale = { ...sale, commissionStatus: newStatus };
 
-        if (!firestore || !user?.uid) return;
+        if (!firestore) return;
         const saleRef = doc(firestore, 'sales', sale.id);
         setDocumentNonBlocking(saleRef, updatedSale, { merge: true });
 

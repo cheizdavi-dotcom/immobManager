@@ -16,16 +16,20 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow read, list, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn();
     }
     match /corretores/{corretorId} {
-      allow read, list, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn();
     }
     match /developments/{developmentId} {
-      allow read, list, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn();
     }
     match /sales/{saleId} {
-      allow read, list, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn();
     }
   }
 }

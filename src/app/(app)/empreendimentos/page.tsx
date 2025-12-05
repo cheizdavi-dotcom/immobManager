@@ -43,7 +43,7 @@ export default function EmpreendimentosPage() {
   };
 
   const deleteDevelopment = (developmentId: string) => {
-    if (!firestore || !user?.uid) return;
+    if (!firestore) return;
     // TODO: Add logic to check if development is associated with a sale before deleting
     const devRef = doc(firestore, 'developments', developmentId);
     deleteDocumentNonBlocking(devRef);

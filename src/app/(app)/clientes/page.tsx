@@ -55,7 +55,7 @@ export default function ClientesPage() {
   };
 
   const deleteClient = (clientId: string) => {
-    if (!firestore || !user?.uid) return;
+    if (!firestore) return;
     // TODO: Add logic to check if client is associated with a sale before deleting
     const clientRef = doc(firestore, 'clients', clientId);
     deleteDocumentNonBlocking(clientRef);

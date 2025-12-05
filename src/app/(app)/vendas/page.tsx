@@ -68,7 +68,7 @@ export default function VendasPage() {
   };
 
   const deleteSale = (saleId: string) => {
-    if (!firestore || !user?.uid) return;
+    if (!firestore) return;
     const saleRef = doc(firestore, 'sales', saleId);
     deleteDocumentNonBlocking(saleRef);
   };
