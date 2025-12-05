@@ -108,7 +108,7 @@ export default function CorretoresPage() {
         )
     }
 
-    if (corretores.length === 0) {
+    if (corretoresComKPIs.length === 0) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
           <div className="flex flex-col items-center gap-2">
@@ -238,7 +238,3 @@ export default function CorretoresPage() {
     </main>
   );
 }
-
-    
-
-    
