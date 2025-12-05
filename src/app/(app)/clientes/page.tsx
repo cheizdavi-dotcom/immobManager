@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -38,7 +38,7 @@ export default function ClientesPage() {
 
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'clients');
+    return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
   const { data: clients, isLoading } = useCollection<Client>(clientsQuery);
@@ -49,14 +49,15 @@ export default function ClientesPage() {
 
   const addOrUpdateClient = (client: Client) => {
     if (!firestore || !user?.uid) return;
-    const clientRef = doc(firestore, 'users', user.uid, 'clients', client.id);
-    setDocumentNonBlocking(clientRef, client, { merge: true });
+    const clientRef = doc(firestore, 'clients', client.id);
+    const dataToSave = { ...client, userId: user.uid };
+    setDocumentNonBlocking(clientRef, dataToSave, { merge: true });
   };
 
   const deleteClient = (clientId: string) => {
     if (!firestore || !user?.uid) return;
     // TODO: Add logic to check if client is associated with a sale before deleting
-    const clientRef = doc(firestore, 'users', user.uid, 'clients', clientId);
+    const clientRef = doc(firestore, 'clients', clientId);
     deleteDocumentNonBlocking(clientRef);
     toast({
       title: 'Cliente Excluído!',

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -26,7 +26,7 @@ export default function EmpreendimentosPage() {
 
   const developmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'developments');
+    return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
   const { data: developments, isLoading } = useCollection<Development>(developmentsQuery);
@@ -37,14 +37,15 @@ export default function EmpreendimentosPage() {
 
   const addOrUpdateDevelopment = (development: Development) => {
     if (!firestore || !user?.uid) return;
-    const devRef = doc(firestore, 'users', user.uid, 'developments', development.id);
-    setDocumentNonBlocking(devRef, development, { merge: true });
+    const devRef = doc(firestore, 'developments', development.id);
+    const dataToSave = { ...development, userId: user.uid };
+    setDocumentNonBlocking(devRef, dataToSave, { merge: true });
   };
 
   const deleteDevelopment = (developmentId: string) => {
     if (!firestore || !user?.uid) return;
     // TODO: Add logic to check if development is associated with a sale before deleting
-    const devRef = doc(firestore, 'users', user.uid, 'developments', developmentId);
+    const devRef = doc(firestore, 'developments', developmentId);
     deleteDocumentNonBlocking(devRef);
     toast({
       title: 'Empreendimento Excluído!',

@@ -22,6 +22,7 @@ export const ALL_CLIENT_STATUSES: ClientStatus[] = ['Frio', 'Morno', 'Quente'];
 
 export type Corretor = {
   id: string;
+  userId: string;
   name: string;
   phone: string;
   photoUrl: string;
@@ -29,6 +30,7 @@ export type Corretor = {
 
 export type Client = {
   id: string;
+  userId: string;
   name: string;
   phone: string;
   cpf?: string;
@@ -37,6 +39,7 @@ export type Client = {
 
 export type Development = {
   id: string;
+  userId: string;
   name: string;
   construtora: string;
   localizacao: string;
@@ -44,6 +47,7 @@ export type Development = {
 
 export type Sale = {
   id: string;
+  userId: string;
   saleDate: any; // Stored as Timestamp, but Date object in form
   corretorId: string;
   clientId: string;

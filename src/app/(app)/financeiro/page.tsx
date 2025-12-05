@@ -11,7 +11,7 @@ import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -43,25 +43,25 @@ export default function FinanceiroPage() {
 
     const salesQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'sales');
+        return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: sales, isLoading: isLoadingSales, setData: setSales } = useCollection<Sale>(salesQuery);
 
     const corretoresQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'corretores');
+        return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
 
     const clientsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'clients');
+        return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
     
     const developmentsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'developments');
+        return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
@@ -122,7 +122,7 @@ export default function FinanceiroPage() {
         const updatedSale = { ...sale, commissionStatus: newStatus };
 
         if (!firestore || !user?.uid) return;
-        const saleRef = doc(firestore, 'users', user.uid, 'sales', sale.id);
+        const saleRef = doc(firestore, 'sales', sale.id);
         setDocumentNonBlocking(saleRef, updatedSale, { merge: true });
 
         toast({

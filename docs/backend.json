@@ -10,6 +10,10 @@
           "type": "string",
           "description": "Unique identifier for the client."
         },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this client."
+        },
         "name": {
           "type": "string",
           "description": "Full name of the client."
@@ -30,6 +34,7 @@
       },
       "required": [
         "id",
+        "userId",
         "name",
         "phone",
         "status"
@@ -44,6 +49,10 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for the agent."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this agent."
         },
         "name": {
           "type": "string",
@@ -60,6 +69,7 @@
       },
       "required": [
         "id",
+        "userId",
         "name",
         "phone"
       ]
@@ -73,6 +83,10 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for the property."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this property."
         },
         "name": {
           "type": "string",
@@ -89,6 +103,7 @@
       },
       "required": [
         "id",
+        "userId",
         "name",
         "construtora",
         "localizacao"
@@ -101,6 +116,7 @@
       "description": "Represents a sale record in the CRM.",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
         "saleDate": { "type": "string", "format": "date-time" },
         "corretorId": { "type": "string" },
         "clientId": { "type": "string" },
@@ -119,7 +135,7 @@
         "empreendimento": { "type": "string" }
       },
       "required": [
-        "id", "saleDate", "corretorId", "clientId", "developmentId", "construtora",
+        "id", "userId", "saleDate", "corretorId", "clientId", "developmentId", "construtora",
         "saleValue", "atoValue", "commission", "status", "commissionStatus",
         "clientName", "empreendimento"
       ]
@@ -155,45 +171,43 @@
   "firestore": {
     "structure": [
       {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": { "$ref": "#/entities/Client" },
+          "description": "Stores all clients for all users."
+        }
+      },
+      {
+        "path": "/corretores/{corretorId}",
+        "definition": {
+          "entityName": "Corretor",
+          "schema": { "$ref": "#/entities/Corretor" },
+          "description": "Stores all brokers for all users."
+        }
+      },
+       {
+        "path": "/developments/{developmentId}",
+        "definition": {
+          "entityName": "Development",
+          "schema": { "$ref": "#/entities/Development" },
+          "description": "Stores all developments for all users."
+        }
+      },
+      {
+        "path": "/sales/{saleId}",
+        "definition": {
+          "entityName": "Sale",
+          "schema": { "$ref": "#/entities/Sale" },
+          "description": "Stores all sales for all users."
+        }
+      },
+      {
         "path": "/users/{userId}",
         "definition": {
           "entityName": "User",
           "schema": { "$ref": "#/entities/User" },
-          "description": "Stores user profile information.",
-          "collections": [
-            {
-              "path": "/clients/{clientId}",
-              "definition": {
-                "entityName": "Client",
-                "schema": { "$ref": "#/entities/Client" },
-                "description": "Stores clients for a specific user."
-              }
-            },
-            {
-              "path": "/corretores/{corretorId}",
-              "definition": {
-                "entityName": "Corretor",
-                "schema": { "$ref": "#/entities/Corretor" },
-                "description": "Stores brokers for a specific user."
-              }
-            },
-             {
-              "path": "/developments/{developmentId}",
-              "definition": {
-                "entityName": "Development",
-                "schema": { "$ref": "#/entities/Development" },
-                "description": "Stores developments for a specific user."
-              }
-            },
-            {
-              "path": "/sales/{saleId}",
-              "definition": {
-                "entityName": "Sale",
-                "schema": { "$ref": "#/entities/Sale" },
-                "description": "Stores sales for a specific user."
-              }
-            }
-          ]
+          "description": "Stores user profile information."
         }
       }
     ]

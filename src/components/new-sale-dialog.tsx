@@ -36,9 +36,11 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { CreatableSelect } from './creatable-select';
+import { useUser } from '@/firebase';
 
 const saleSchema = z.object({
   id: z.string().optional(),
+  userId: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
   corretorId: z.string().min(1, 'Selecione um corretor.'),
   clientId: z.string().min(1, 'O nome do cliente é obrigatório.'),
@@ -113,7 +115,7 @@ const CurrencyInput = ({ value, onChange, ...props }: { value: number, onChange:
 
 export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, onClientSubmit, developments, onDevelopmentSubmit }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  
+  const { user } = useUser();
   const { toast } = useToast();
 
   const isOpen = controlledIsOpen ?? uncontrolledOpen;
@@ -198,12 +200,21 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
 
   const onSubmit = (data: SaleFormValues) => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Erro de Autenticação',
+            description: 'Você precisa estar logado para registrar uma venda.',
+        });
+        return;
+    }
     const clientName = clients.find(c => c.id === data.clientId)?.name || data.clientId;
     const empreendimentoName = developments.find(d => d.id === data.developmentId)?.name || data.developmentId;
 
     const finalData: Sale = {
         ...data,
         id: sale?.id || new Date().toISOString(),
+        userId: user.uid,
         commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
         observations: data.observations || '',
         combinado: data.combinado || '',
@@ -309,7 +320,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                         value={field.value}
                         onChange={(newValue, isNew) => {
                             if (isNew && newValue) {
-                                const newClient: Client = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio' };
+                                const newClient: Client = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio', userId: user.uid };
                                 onClientSubmit(newClient);
                                 field.onChange(newClient.id);
                             } else {
@@ -336,7 +347,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                             onChange={(newValue, isNew) => {
                                 if (isNew && newValue) {
                                     // When creating a new development, we can prompt for construtora or leave it blank
-                                    const newDev: Development = { id: new Date().toISOString(), name: newValue, construtora: '', localizacao: '' };
+                                    const newDev: Development = { id: new Date().toISOString(), name: newValue, construtora: '', localizacao: '', userId: user.uid };
                                     onDevelopmentSubmit(newDev);
                                     field.onChange(newDev.id);
                                     setValue('construtora', ''); // Reset construtora

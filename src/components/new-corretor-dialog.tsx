@@ -20,9 +20,11 @@ import * as z from 'zod';
 import { type Corretor } from '@/lib/types';
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase';
 
 const corretorSchema = z.object({
   id: z.string().optional(),
+  userId: z.string().optional(),
   name: z.string().min(1, 'O nome é obrigatório.'),
   phone: z.string().min(1, 'O telefone é obrigatório.'),
   photoUrl: z.string().optional().or(z.literal('')),
@@ -39,6 +41,7 @@ type NewCorretorDialogProps = {
 
 export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen }: NewCorretorDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const { user } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -93,10 +96,19 @@ export function NewCorretorDialog({ onCorretorSubmit, corretor = null, isOpen: c
   };
 
   const onSubmit = (data: CorretorFormValues) => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Erro de Autenticação',
+            description: 'Você precisa estar logado para criar um corretor.',
+        });
+        return;
+    }
     const finalData: Corretor = {
         ...data,
         photoUrl: previewUrl || '',
         id: corretor?.id || new Date().toISOString(),
+        userId: user.uid,
     };
     onCorretorSubmit(finalData);
     toast({

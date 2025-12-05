@@ -15,7 +15,7 @@ import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
 import { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 
 type SalesHistoryDialogProps = {
@@ -45,13 +45,13 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
 
     const clientsQuery = useMemoFirebase(() => {
       if (!firestore || !user?.uid) return null;
-      return collection(firestore, 'users', user.uid, 'clients');
+      return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: clientsData } = useCollection<Client>(clientsQuery);
 
     const developmentsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'developments');
+        return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: developmentsData } = useCollection<Development>(developmentsQuery);
 

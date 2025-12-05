@@ -11,7 +11,7 @@ import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,12 +22,12 @@ export default function CorretoresPage() {
 
   const corretoresQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'corretores');
+    return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
   const salesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'sales');
+    return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
   const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
@@ -41,8 +41,9 @@ export default function CorretoresPage() {
 
   const addOrUpdateCorretor = (corretor: Corretor) => {
     if (!firestore || !user?.uid) return;
-    const corretorRef = doc(firestore, 'users', user.uid, 'corretores', corretor.id);
-    setDocumentNonBlocking(corretorRef, corretor, { merge: true });
+    const corretorRef = doc(firestore, 'corretores', corretor.id);
+    const dataToSave = { ...corretor, userId: user.uid };
+    setDocumentNonBlocking(corretorRef, dataToSave, { merge: true });
   };
 
   const deleteCorretor = (corretorId: string) => {
@@ -56,7 +57,7 @@ export default function CorretoresPage() {
       });
       return;
     }
-    const corretorRef = doc(firestore, 'users', user.uid, 'corretores', corretorId);
+    const corretorRef = doc(firestore, 'corretores', corretorId);
     deleteDocumentNonBlocking(corretorRef);
     toast({
         title: "Corretor Excluído!",

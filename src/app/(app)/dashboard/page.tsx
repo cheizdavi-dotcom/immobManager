@@ -1,6 +1,6 @@
 'use client';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { useMemo } from 'react';
 import { KpiCard } from '@/components/kpi-card';
@@ -19,25 +19,25 @@ export default function DashboardPage() {
 
     const salesQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'sales');
+        return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
 
     const corretoresQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'corretores');
+        return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
 
     const clientsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'clients');
+        return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
     
     const developmentsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
-        return collection(firestore, 'users', user.uid, 'developments');
+        return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 

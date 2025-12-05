@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -32,32 +32,32 @@ export default function VendasPage() {
   
   const salesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'sales');
+    return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
   const { data: salesData, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
 
   const corretoresQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'corretores');
+    return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
   const { data: corretoresData, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'clients');
+    return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
   const { data: clientsData, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
   
   const developmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'developments');
+    return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
   const { data: developmentsData, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
   const addOrUpdateSale = (sale: Sale) => {
     if (!firestore || !user?.uid) return;
-    const saleRef = doc(firestore, 'users', user.uid, 'sales', sale.id);
-    const dataToSave = { ...sale };
+    const saleRef = doc(firestore, 'sales', sale.id);
+    const dataToSave = { ...sale, userId: user.uid };
     // Firestore cannot store undefined values.
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof Sale] === undefined) {
@@ -69,7 +69,7 @@ export default function VendasPage() {
 
   const deleteSale = (saleId: string) => {
     if (!firestore || !user?.uid) return;
-    const saleRef = doc(firestore, 'users', user.uid, 'sales', saleId);
+    const saleRef = doc(firestore, 'sales', saleId);
     deleteDocumentNonBlocking(saleRef);
   };
 
@@ -139,14 +139,16 @@ export default function VendasPage() {
 
   const addOrUpdateClient = (client: Client) => {
     if (!firestore || !user?.uid) return;
-    const clientRef = doc(firestore, 'users', user.uid, 'clients', client.id);
-    setDocumentNonBlocking(clientRef, client, { merge: true });
+    const clientRef = doc(firestore, 'clients', client.id);
+    const dataToSave = { ...client, userId: user.uid };
+    setDocumentNonBlocking(clientRef, dataToSave, { merge: true });
   };
 
   const addOrUpdateDevelopment = (dev: Development) => {
     if (!firestore || !user?.uid) return;
-    const devRef = doc(firestore, 'users', user.uid, 'developments', dev.id);
-    setDocumentNonBlocking(devRef, dev, { merge: true });
+    const devRef = doc(firestore, 'developments', dev.id);
+    const dataToSave = { ...dev, userId: user.uid };
+    setDocumentNonBlocking(devRef, dataToSave, { merge: true });
   }
 
   return (
