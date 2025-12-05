@@ -1,7 +1,7 @@
 'use client';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { KpiCard } from '@/components/kpi-card';
 import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -10,12 +10,26 @@ import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
 import { subDays } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
     const [sales] = useLocalStorage<Sale[]>('sales', []);
     const [corretores] = useLocalStorage<Corretor[]>('corretores', []);
     const [clients] = useLocalStorage<Client[]>('clients', []);
     const [developments] = useLocalStorage<Development[]>('developments', []);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const showToast = localStorage.getItem('showLoginSuccessToast');
+        if (showToast) {
+            toast({
+                title: "Login bem-sucedido!",
+                description: "Bem-vindo(a) de volta!",
+            });
+            localStorage.removeItem('showLoginSuccessToast');
+        }
+    }, [toast]);
+
 
     const {
         faturamentoVendasPagas,

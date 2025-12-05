@@ -34,7 +34,6 @@ const registerSchema = z.object({
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [users, setUsers] = useLocalStorage<User[]>('users', []);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('user', null);
   const { toast } = useToast();
   const router = useRouter();
@@ -55,46 +54,65 @@ export default function AuthPage() {
     }
   }, [currentUser, router]);
 
-  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    const user = users.find(u => u.email === values.email && u.password === values.password);
-    if (user) {
-      setCurrentUser(user);
-      toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
-      router.push('/dashboard');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Falha no login',
-        description: 'E-mail ou senha inválidos.',
-      });
-    }
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    loginForm.formState.isSubmitting;
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Falha no login');
+        }
+
+        setCurrentUser(data);
+        localStorage.setItem('showLoginSuccessToast', 'true');
+        router.push('/dashboard');
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Falha no login',
+            description: error.message || 'E-mail ou senha inválidos.',
+        });
+    } 
   };
 
-  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
-    if (users.some(u => u.email === values.email)) {
-      toast({
-        variant: 'destructive',
-        title: 'Falha no cadastro',
-        description: 'Este e-mail já está em uso.',
-      });
-      return;
+  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
+    registerForm.formState.isSubmitting;
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Falha no cadastro');
+        }
+        
+        toast({
+          title: 'Cadastro realizado com sucesso!',
+          description: 'Você já pode fazer o login.',
+        });
+        loginForm.setValue('email', values.email);
+        loginForm.setValue('password', '');
+        setIsLogin(true);
+        registerForm.reset();
+
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Falha no cadastro',
+            description: error.message || 'Ocorreu um erro desconhecido.',
+        });
     }
-    const newUser: User = {
-      id: new Date().toISOString(),
-      name: values.name,
-      email: values.email,
-      password: values.password, // Storing password directly, NOT for production
-      photoUrl: ''
-    };
-    setUsers([...users, newUser]);
-    toast({
-      title: 'Cadastro realizado com sucesso!',
-      description: 'Você já pode fazer o login.',
-    });
-    loginForm.setValue('email', values.email);
-    loginForm.setValue('password', '');
-    setIsLogin(true);
-    registerForm.reset();
   };
 
   return (
