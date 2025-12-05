@@ -52,6 +52,7 @@ export default function AuthPage() {
   });
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
@@ -66,6 +67,7 @@ export default function AuthPage() {
   };
 
   const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
+    if (!auth) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       await updateProfile(userCredential.user, { displayName: values.name });
