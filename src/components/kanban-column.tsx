@@ -1,3 +1,4 @@
+'use client';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { KanbanCard } from './kanban-card';
 
@@ -24,8 +25,8 @@ export function KanbanColumn({ title, sales, corretoresMap, clientsMap, developm
             key={sale.id} 
             sale={sale} 
             corretorName={corretoresMap[sale.corretorId]?.name || 'N/A'}
-            clientName={sale.clientName || 'N/A'}
-            developmentName={sale.empreendimento || 'N/A'}
+            clientName={clientsMap[sale.clientId]?.name || 'N/A'}
+            developmentName={developmentsMap[sale.developmentId]?.name || 'N/A'}
           />
         ))}
          {sales.length === 0 && (
