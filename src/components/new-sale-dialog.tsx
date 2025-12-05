@@ -168,16 +168,17 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
 
   useEffect(() => {
-    const isCommissionManuallyEdited = dirtyFields.commission;
-    if (!isCommissionManuallyEdited) {
+    if (!dirtyFields.commission) {
       const saleVal = safeParseFloat(saleValue);
-      const commissionPerc = commissionPercentage ? safeParseFloat(commissionPercentage) : 0;
+      const commissionPerc = safeParseFloat(commissionPercentage);
+
       if (saleVal > 0 && commissionPerc > 0) {
-          const commissionValue = saleVal * (commissionPerc / 100);
-          setValue('commission', String(commissionValue), { shouldDirty: true });
+        const commissionValue = saleVal * (commissionPerc / 100);
+        setValue('commission', String(commissionValue), { shouldDirty: false });
       }
     }
   }, [saleValue, commissionPercentage, setValue, dirtyFields.commission]);
+
 
   const developmentId = watch('developmentId');
   useEffect(() => {
@@ -505,5 +506,3 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     </Dialog>
   );
 }
-
-    
