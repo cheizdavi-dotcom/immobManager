@@ -1,0 +1,104 @@
+diff --git a/node_modules/firebase/package.json b/node_modules/firebase/package.json
+index 548a8f5..206b1e6 100644
+--- a/node_modules/firebase/package.json
++++ b/node_modules/firebase/package.json
+@@ -93,6 +93,9 @@
+       "import": "./dist/esm/index.esm.js"
+     },
+     "./app-check": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -101,6 +104,9 @@
+       }
+     },
+     "./auth": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -112,6 +118,9 @@
+       "import": "./dist/esm/index.esm.js"
+     },
+     "./database": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -120,6 +129,9 @@
+       }
+     },
+     "./firestore": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -131,6 +143,9 @@
+       "import": "./dist/esm/index.esm.js"
+     },
+     "./functions": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -142,6 +157,9 @@
+       "import": "./dist/esm/index.esm.js"
+     },
+     "./messaging": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -153,6 +171,9 @@
+       "import": "./dist/esm/index.esm.js"
+     },
+     "./performance": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -164,6 +185,9 @@
+       "import": "./dist/esm/index.esm.js"
+     },
+     "./remote-config": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -172,6 +196,9 @@
+       }
+     },
+     "./storage": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
+@@ -180,6 +207,9 @@
+       }
+     },
+     "./vertex-ai": {
++      "node": {
++        "import": "./dist/node-esm/index.js"
++      },
+       "browser": {
+         "import": "./dist/esm/index.esm.js"
+       },
