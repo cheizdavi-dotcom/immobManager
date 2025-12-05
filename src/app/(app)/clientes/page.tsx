@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
@@ -38,18 +38,27 @@ export default function ClientesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user?.id) {
-      setIsLoading(true);
-      getClients(user.id)
-        .then(data => setClients(data))
-        .catch(err => {
-            console.error(err);
-            toast({ variant: 'destructive', title: 'Erro ao buscar clientes.', description: err.message });
-        })
-        .finally(() => setIsLoading(false));
+  const fetchClients = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
     }
-  }, [user?.id]);
+    
+    setIsLoading(true);
+    try {
+      const data = await getClients(user.id);
+      setClients(data);
+    } catch (err: any) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro ao buscar clientes.', description: err.message });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, toast]);
+  
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   const handleAddOrUpdateClient = async (clientFormData: Omit<Client, 'id' | 'userId'>, id?: string) => {
     if (!user?.id) {
@@ -60,24 +69,17 @@ export default function ClientesPage() {
     try {
         const savedClient = await addOrUpdateClient(clientFormData, user.id, id);
         
-        setClients((prevClients) => {
-            if (id) {
-                // Atualizando um cliente existente
-                return prevClients.map((c) => (c.id === id ? savedClient : c));
-            } else {
-                // Adicionando um novo cliente no início da lista
-                return [savedClient, ...prevClients];
-            }
-        });
+        // Re-fetch a lista para garantir consistência total com o banco de dados.
+        await fetchClients();
 
         toast({
             title: id ? 'Cliente Atualizado!' : 'Cliente Cadastrado!',
             description: `${savedClient.name} foi salvo com sucesso.`,
         });
-        return savedClient; // Retorna o cliente salvo para fechar o modal
+        return savedClient;
     } catch(err: any) {
         toast({ variant: 'destructive', title: 'Erro ao salvar cliente.', description: err.message });
-        return null; // Retorna null em caso de erro
+        return null;
     }
   };
 
@@ -121,6 +123,18 @@ export default function ClientesPage() {
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="text-muted-foreground">Carregando clientes...</p>
             </div>
+        )
+    }
+
+    if (!user?.id) {
+        return (
+            <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+                <Users className="h-16 w-16 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Sessão Inválida</h2>
+                <p className="text-muted-foreground">
+                    Faça o login novamente para gerenciar seus clientes.
+                </p>
+           </div>
         )
     }
 
@@ -203,7 +217,7 @@ export default function ClientesPage() {
             <h1 className="text-2xl font-bold tracking-tight">Gestão de Clientes</h1>
             <p className="text-muted-foreground">Cadastre e gerencie sua carteira de clientes.</p>
         </div>
-        <Button onClick={handleOpenNewDialog}>Novo Cliente</Button>
+        <Button onClick={handleOpenNewDialog} disabled={!user?.id}>Novo Cliente</Button>
       </div>
 
       <NewClientDialog
