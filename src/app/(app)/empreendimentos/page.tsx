@@ -16,11 +16,11 @@ import { NewDevelopmentDialog } from '@/components/new-development-dialog';
 import type { Development } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 import { developments as initialDevelopments, getDevelopmentsStorageKey } from '@/lib/data';
 
 export default function EmpreendimentosPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const userEmail = user?.email || '';
   const [developments, setDevelopments] = useLocalStorage<Development[]>(getDevelopmentsStorageKey(userEmail), initialDevelopments);
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);

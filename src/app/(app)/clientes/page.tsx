@@ -18,7 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cva } from 'class-variance-authority';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 import { clients as initialClients, getClientsStorageKey } from '@/lib/data';
 
 const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
@@ -32,7 +32,7 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function ClientesPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const userEmail = user?.email || '';
   const [clients, setClients] = useLocalStorage<Client[]>(getClientsStorageKey(userEmail), initialClients);
   const [editingClient, setEditingClient] = useState<Client | null>(null);

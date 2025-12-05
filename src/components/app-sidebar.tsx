@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Banknote,
   Building,
@@ -32,7 +32,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 const menuItems = [
   {
@@ -69,7 +70,14 @@ const menuItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/auth');
+  };
 
   return (
     <>
@@ -104,11 +112,11 @@ export function AppSidebar() {
             <button className="flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-sidebar-accent">
               <div className="flex items-center gap-3 overflow-hidden">
                 <Avatar className="size-8">
-                  <AvatarImage src={PlaceHolderImages[0].imageUrl} alt="User" />
-                  <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
+                  <AvatarImage src={user?.photoURL || PlaceHolderImages[0].imageUrl} alt="User" />
+                  <AvatarFallback>{user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
                 <span className="truncate text-sm font-medium">
-                  {user?.name || 'Admin'}
+                  {user?.displayName || user?.email || 'Admin'}
                 </span>
               </div>
               <ChevronDown className="size-4 shrink-0" />
@@ -120,7 +128,7 @@ export function AppSidebar() {
             <DropdownMenuItem disabled>Perfil</DropdownMenuItem>
             <DropdownMenuItem disabled>Configurações</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sair</span>
             </DropdownMenuItem>

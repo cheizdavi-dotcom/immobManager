@@ -8,22 +8,22 @@ import {
   SidebarTrigger,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isUserLoading && !user) {
       router.replace('/auth');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isUserLoading, user, router]);
 
-  if (isLoading || !isAuthenticated) {
+  if (isUserLoading || !user) {
     return (
         <div className="flex h-screen w-screen items-center justify-center p-8">
             <div className="flex w-full h-full">

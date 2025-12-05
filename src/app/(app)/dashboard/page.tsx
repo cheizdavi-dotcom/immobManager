@@ -12,10 +12,10 @@ import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
 import { isAfter, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user } = useUser();
     const userEmail = user?.email || '';
 
     const [sales] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);

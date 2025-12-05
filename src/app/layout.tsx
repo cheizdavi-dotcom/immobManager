@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Inter } from 'next/font/google'
-import { AuthProvider } from '@/hooks/useAuth.tsx';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -20,9 +20,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
       <body className="font-body antialiased">
-        <AuthProvider>
+        <FirebaseClientProvider>
             {children}
-        </AuthProvider>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

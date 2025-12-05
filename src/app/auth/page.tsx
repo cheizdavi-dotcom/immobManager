@@ -14,10 +14,15 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useAuth } from '@/firebase';
 import { Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido.'),
@@ -32,7 +37,7 @@ const registerSchema = z.object({
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const { login, register: signUp } = useAuth();
+  const auth = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -48,21 +53,22 @@ export default function AuthPage() {
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
-      await login(values.email, values.password);
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Falha no login',
-        description: error.message,
+        description: 'E-mail ou senha inválidos.',
       });
     }
   };
 
   const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
     try {
-      await signUp(values.name, values.email, values.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      await updateProfile(userCredential.user, { displayName: values.name });
       toast({
         title: 'Cadastro realizado com sucesso!',
         description: 'Você já pode fazer o login.',
@@ -71,10 +77,10 @@ export default function AuthPage() {
       setIsLogin(true);
       registerForm.reset();
     } catch (error: any) {
-      toast({
+       toast({
         variant: 'destructive',
         title: 'Falha no cadastro',
-        description: error.message,
+        description: error.code === 'auth/email-already-in-use' ? 'Este e-mail já está em uso.' : 'Ocorreu um erro.',
       });
     }
   };

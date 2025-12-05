@@ -12,7 +12,7 @@ import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useMemo } from 'react';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
@@ -38,7 +38,7 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function FinanceiroPage() {
-    const { user } = useAuth();
+    const { user } = useUser();
     const userEmail = user?.email || '';
     
     const [sales, setSales] = useLocalStorage<Sale[]>(getSalesStorageKey(userEmail), initialSales);

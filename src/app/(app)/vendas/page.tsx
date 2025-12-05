@@ -18,10 +18,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 
 export default function VendasPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const userEmail = user?.email || '';
 
   const [searchTerm, setSearchTerm] = useState('');

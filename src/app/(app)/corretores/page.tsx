@@ -12,10 +12,10 @@ import useLocalStorage from '@/hooks/useLocalStorage';
 import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/hooks/useAuth.tsx';
+import { useUser } from '@/firebase';
 
 export default function CorretoresPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const userEmail = user?.email || '';
 
   const [corretores, setCorretores] = useLocalStorage<Corretor[]>(getCorretoresStorageKey(userEmail), initialCorretores);
