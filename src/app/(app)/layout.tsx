@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useUser } from '../../firebase';
+import { useUser } from '@/firebase';
 import { Loader } from 'lucide-react';
 
 

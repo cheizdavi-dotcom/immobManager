@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../firebase';
+import { useAuth } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 

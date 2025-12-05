@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useUser, useAuth } from '../firebase';
+import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 
 
