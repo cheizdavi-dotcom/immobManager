@@ -63,12 +63,12 @@ export default function AuthPage() {
             body: JSON.stringify(values),
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.message || 'Falha no login');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha no login');
         }
 
+        const data = await response.json();
         setCurrentUser(data);
         localStorage.setItem('showLoginSuccessToast', 'true');
         router.push('/dashboard');
@@ -91,11 +91,12 @@ export default function AuthPage() {
             body: JSON.stringify(values),
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.message || 'Falha no cadastro');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha no cadastro');
         }
+
+        const data = await response.json();
         
         toast({
           title: 'Cadastro realizado com sucesso!',
