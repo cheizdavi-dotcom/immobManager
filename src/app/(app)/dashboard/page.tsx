@@ -58,12 +58,12 @@ export default function DashboardPage() {
         const faturamentoVendasPagas = completedSales.reduce((acc, s) => acc + safeParseFloat(s.saleValue), 0);
         const vgvPipelineAtivo = activeSales.reduce((acc, s) => acc + safeParseFloat(s.saleValue), 0);
         
-        const comissoesPagas = completedSales
+        const comissoesPagas = sales
             .filter(s => s.commissionStatus === 'Pago')
             .reduce((acc, s) => acc + safeParseFloat(s.commission), 0);
 
-        const comissoesPendentes = activeSales
-            .filter(s => s.commissionStatus === 'Pendente')
+        const comissoesPendentes = sales
+            .filter(s => s.commissionStatus === 'Pendente' && s.status !== 'Venda Cancelada / Caiu')
             .reduce((acc, s) => acc + safeParseFloat(s.commission), 0);
         
         const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
@@ -79,10 +79,11 @@ export default function DashboardPage() {
         const salesByBroker = sales
             .filter(s => s.status === 'Venda Concluída / Paga')
             .reduce((acc, sale) => {
-                if (!acc[sale.corretorId]) {
-                    acc[sale.corretorId] = 0;
+                const corretorId = sale.corretorId;
+                if (!acc[corretorId]) {
+                    acc[corretorId] = 0;
                 }
-                acc[sale.corretorId] += safeParseFloat(sale.saleValue);
+                acc[corretorId] += safeParseFloat(sale.saleValue);
                 return acc;
         }, {} as Record<string, number>);
 
@@ -212,3 +213,5 @@ export default function DashboardPage() {
         </main>
     );
 }
+
+    

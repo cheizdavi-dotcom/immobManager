@@ -87,6 +87,7 @@ export default function CorretoresPage() {
   }
 
   const corretoresComKPIs = useMemo(() => {
+    if (!corretores || !sales) return [];
     return corretores.map(corretor => {
       const corretorSales = sales.filter(s => s.corretorId === corretor.id && s.status === 'Venda Concluída / Paga');
       const totalVendido = corretorSales.reduce((acc, sale) => acc + safeParseFloat(sale.saleValue), 0);
@@ -238,3 +239,5 @@ export default function CorretoresPage() {
     </main>
   );
 }
+
+    
