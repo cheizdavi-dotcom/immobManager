@@ -25,7 +25,7 @@ export type Corretor = {
   userId: string;
   name: string;
   phone: string;
-  photoUrl: string;
+  photoUrl?: string;
 };
 
 export type Client = {
@@ -62,9 +62,6 @@ export type Sale = {
   observations?: string;
   combinado?: string;
   combinadoDate?: any | null; // Stored as string, but Date object in form
-  // Denormalized fields for easier access
-  clientName: string;
-  empreendimento: string;
 };
 
 // Added for local authentication

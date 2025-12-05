@@ -7,15 +7,15 @@ import { NewSaleDialog } from './new-sale-dialog';
 type KanbanBoardProps = {
   sales: Sale[];
   statuses: SaleStatus[];
-  onSaleSubmit: (sale: Sale) => void;
+  onSaleSubmit: (sale: Omit<Sale, 'id' | 'userId' | 'commissionStatus'>, id?: string) => Promise<Sale | null>;
   corretoresMap: Record<string, Corretor>;
   clientsMap: Record<string, Client>;
   developmentsMap: Record<string, Development>;
   corretores: Corretor[];
   clients: Client[];
-  onClientSubmit: (client: Client) => void;
+  onClientSubmit: (client: Omit<Client, 'id' | 'userId'>) => Promise<Client | null>;
   developments: Development[];
-  onDevelopmentSubmit: (dev: Development) => void;
+  onDevelopmentSubmit: (dev: Omit<Development, 'id' | 'userId'>) => Promise<Development | null>;
 };
 
 export function KanbanBoard({ sales, onSaleSubmit, corretoresMap, clientsMap, developmentsMap, corretores, clients, onClientSubmit, developments, onDevelopmentSubmit }: KanbanBoardProps) {

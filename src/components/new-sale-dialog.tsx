@@ -25,7 +25,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, PlusCircle, Percent } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Percent, Loader2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,18 +33,16 @@ import { cn, formatCurrency, parseCurrency } from '@/lib/utils';
 import { ALL_STATUSES, type Sale, type Corretor, type Client, type Development } from '@/lib/types';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { CreatableSelect } from './creatable-select';
 
 const saleSchema = z.object({
-  id: z.string().optional(),
   saleDate: z.date({ required_error: 'A data da venda é obrigatória.' }),
   corretorId: z.string().min(1, 'Selecione um corretor.'),
   clientId: z.string().min(1, 'O nome do cliente é obrigatório.'),
   developmentId: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
   construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
-  saleValue: z.number().min(0, 'O valor da venda não pode ser negativo.'),
+  saleValue: z.number().min(0.01, 'O valor da venda deve ser maior que zero.'),
   atoValue: z.number().min(0, 'O valor do ato não pode ser negativo.'),
   commissionPercentage: z.preprocess(
     (a) => (a === null || a === undefined || a === '' ? null : parseFloat(String(a).replace(/[^0-9.]/g, ''))),
@@ -54,7 +52,6 @@ const saleSchema = z.object({
   status: z.enum(ALL_STATUSES, {
     errorMap: () => ({ message: 'Selecione um status válido.' }),
   }),
-  commissionStatus: z.enum(['Pendente', 'Pago']).optional(),
   observations: z.string().optional(),
   combinado: z.string().optional(),
   combinadoDate: z.date().optional().nullable(),
@@ -62,6 +59,8 @@ const saleSchema = z.object({
 
 
 type SaleFormValues = z.infer<typeof saleSchema>;
+type SaleSubmitData = Omit<Sale, 'id' | 'userId' | 'commissionStatus'>;
+
 
 const formatPercentageForInput = (value: number | undefined | null) => {
     if (value === undefined || value === null) return '';
@@ -70,22 +69,25 @@ const formatPercentageForInput = (value: number | undefined | null) => {
 
 
 type NewSaleDialogProps = {
-    onSaleSubmit: (sale: Sale) => void;
+    onSaleSubmit: (sale: SaleSubmitData, id?:string) => Promise<Sale | null>;
     sale?: Sale | null;
     isOpen?: boolean;
     onOpenChange?: (isOpen: boolean) => void;
     corretores: Corretor[];
     clients: Client[];
-    onClientSubmit: (client: Client) => void;
+    onClientSubmit: (client: Omit<Client, 'id' | 'userId'>) => Promise<Client | null>;
     developments: Development[];
-    onDevelopmentSubmit: (dev: Development) => void;
+    onDevelopmentSubmit: (dev: Omit<Development, 'id' | 'userId'>) => Promise<Development | null>;
 }
 
 const CurrencyInput = ({ value, onChange, ...props }: { value: number, onChange: (value: number) => void } & Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'>) => {
     const [displayValue, setDisplayValue] = useState(formatCurrency(value));
 
     useEffect(() => {
-        setDisplayValue(formatCurrency(value));
+        // Update display value only if it's different to avoid cursor jumping
+        if (parseCurrency(displayValue) !== value) {
+            setDisplayValue(formatCurrency(value));
+        }
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,7 +115,7 @@ const CurrencyInput = ({ value, onChange, ...props }: { value: number, onChange:
 
 export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsOpen, onOpenChange: setControlledIsOpen, corretores, clients, onClientSubmit, developments, onDevelopmentSubmit }: NewSaleDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isOpen = controlledIsOpen ?? uncontrolledOpen;
   const onOpenChange = setControlledIsOpen ?? setUncontrolledOpen;
@@ -126,13 +128,12 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     control,
     watch,
     setValue,
-    formState: { errors, dirtyFields },
+    formState: { errors, dirtyFields, isDirty },
     reset,
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
       status: 'Proposta / Cadastro',
-      commissionStatus: 'Pendente',
       observations: '',
       combinado: '',
       saleValue: 0,
@@ -155,7 +156,6 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         });
         } else {
         reset({
-            id: undefined,
             corretorId: '',
             clientId: '',
             developmentId: '',
@@ -166,7 +166,6 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             commissionPercentage: 5,
             commission: 0,
             saleDate: new Date(),
-            commissionStatus: 'Pendente',
             observations: '',
             combinado: '',
             combinadoDate: null,
@@ -183,7 +182,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
     const isCommissionManuallyEdited = dirtyFields.commission;
     if (!isCommissionManuallyEdited && saleValue > 0 && commissionPercentage && commissionPercentage > 0) {
       const commissionValue = saleValue * (commissionPercentage / 100);
-      setValue('commission', commissionValue);
+      setValue('commission', commissionValue, { shouldDirty: true });
     }
   }, [saleValue, commissionPercentage, setValue, dirtyFields.commission]);
 
@@ -196,27 +195,13 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   }, [developmentId, developments, setValue]);
 
 
-  const onSubmit = (data: SaleFormValues) => {
-    const clientName = clients.find(c => c.id === data.clientId)?.name || data.clientId;
-    const empreendimentoName = developments.find(d => d.id === data.developmentId)?.name || data.developmentId;
-
-    const finalData: Sale = {
-        ...data,
-        id: sale?.id || new Date().toISOString(),
-        userId: 'local-user', // Placeholder for local development
-        commissionStatus: isEditing && sale.commissionStatus ? sale.commissionStatus : 'Pendente',
-        observations: data.observations || '',
-        combinado: data.combinado || '',
-        combinadoDate: data.combinadoDate || null,
-        clientName: clientName,
-        empreendimento: empreendimentoName,
-    };
-    onSaleSubmit(finalData);
-    toast({
-      title: isEditing ? 'Venda Atualizada!' : 'Venda Cadastrada!',
-      description: `A venda foi salva com sucesso.`,
-    });
-    onOpenChange(false);
+  const onSubmit = async (data: SaleFormValues) => {
+    setIsSubmitting(true);
+    const result = await onSaleSubmit(data, sale?.id);
+    setIsSubmitting(false);
+    if (result && onOpenChange) {
+        onOpenChange(false);
+    }
   };
   
   return (
@@ -281,7 +266,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 name="corretorId"
                 control={control}
                 render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                         <SelectTrigger>
                             <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
@@ -307,11 +292,13 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                         placeholder="Selecione ou digite um novo cliente"
                         options={clients.map(c => ({ value: c.id, label: c.name }))}
                         value={field.value}
-                        onChange={(newValue, isNew) => {
+                        onChange={async (newValue, isNew) => {
                             if (isNew && newValue) {
-                                const newClient: Client = { id: new Date().toISOString(), name: newValue, phone: '', status: 'Frio', userId: 'local-user' };
-                                onClientSubmit(newClient);
-                                field.onChange(newClient.id);
+                                const newClientData = { name: newValue, phone: '', status: 'Frio' as const };
+                                const createdClient = await onClientSubmit(newClientData);
+                                if (createdClient) {
+                                    field.onChange(createdClient.id);
+                                }
                             } else {
                                 field.onChange(newValue);
                             }
@@ -330,16 +317,17 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                     control={control}
                     render={({ field }) => (
                         <CreatableSelect
-                            placeholder="Selecione ou digite um novo empreendimento"
+                            placeholder="Selecione ou crie um novo"
                             options={developments.map(d => ({ value: d.id, label: d.name }))}
                             value={field.value}
-                            onChange={(newValue, isNew) => {
+                            onChange={async (newValue, isNew) => {
                                 if (isNew && newValue) {
-                                    // When creating a new development, we can prompt for construtora or leave it blank
-                                    const newDev: Development = { id: new Date().toISOString(), name: newValue, construtora: '', localizacao: '', userId: 'local-user' };
-                                    onDevelopmentSubmit(newDev);
-                                    field.onChange(newDev.id);
-                                    setValue('construtora', ''); // Reset construtora
+                                    const newDevData = { name: newValue, construtora: '', localizacao: '' };
+                                    const createdDev = await onDevelopmentSubmit(newDevData);
+                                    if(createdDev) {
+                                        field.onChange(createdDev.id);
+                                        setValue('construtora', createdDev.construtora, { shouldValidate: true });
+                                    }
                                 } else {
                                     field.onChange(newValue);
                                 }
@@ -352,7 +340,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
             <div className="space-y-2">
                 <Label htmlFor="construtora">Construtora</Label>
-                <Input id="construtora" {...register('construtora')} placeholder="Ex: Tenda, MRV" readOnly />
+                <Input id="construtora" {...register('construtora')} placeholder="Ex: Tenda, MRV" readOnly disabled={isSubmitting}/>
                 {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
             </div>
           </div>
@@ -363,7 +351,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="saleValue"
                     control={control}
-                    render={({ field }) => <CurrencyInput {...field} />}
+                    render={({ field }) => <CurrencyInput {...field} disabled={isSubmitting} />}
                 />
                 {errors.saleValue && <p className="text-sm text-destructive">{errors.saleValue.message}</p>}
                 </div>
@@ -372,7 +360,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="atoValue"
                     control={control}
-                    render={({ field }) => <CurrencyInput {...field} />}
+                    render={({ field }) => <CurrencyInput {...field} disabled={isSubmitting} />}
                 />
                 {errors.atoValue && <p className="text-sm text-destructive">{errors.atoValue.message}</p>}
                 </div>
@@ -385,7 +373,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 <Controller
                     name="commission"
                     control={control}
-                    render={({ field }) => <CurrencyInput {...field} />}
+                    render={({ field }) => <CurrencyInput {...field} disabled={isSubmitting} />}
                 />
               {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
             </div>
@@ -407,6 +395,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                          field.onChange(value === '' ? null : parseFloat(value));
                       }}
                       value={formatPercentageForInput(field.value)}
+                      disabled={isSubmitting}
                     />
                   )}
                 />
@@ -423,6 +412,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 {...register('observations')}
                 placeholder="Ex: Cliente regularizando SPC, aguardando esposa assinar..."
                 rows={2}
+                 disabled={isSubmitting}
               />
               {errors.observations && <p className="text-sm text-destructive">{errors.observations.message}</p>}
             </div>
@@ -435,6 +425,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                     {...register('combinado')}
                     placeholder="Ex: Entrevista dia 15; Devolver contrato assinado..."
                     rows={2}
+                     disabled={isSubmitting}
                 />
                 {errors.combinado && <p className="text-sm text-destructive">{errors.combinado.message}</p>}
                 </div>
@@ -452,6 +443,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                                 'w-full justify-start text-left font-normal',
                                 !field.value && 'text-muted-foreground'
                                 )}
+                                disabled={isSubmitting}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {field.value ? (
@@ -482,7 +474,7 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
               name="status"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isSubmitting}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -498,7 +490,10 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
           </div>
 
           <DialogFooter>
-            <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Salvar Venda'}</Button>
+            <Button type="submit" disabled={isSubmitting || !isDirty}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isEditing ? 'Salvar Alterações' : 'Salvar Venda'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

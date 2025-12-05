@@ -24,13 +24,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 type SalesTableProps = {
   sales: Sale[];
-  onSaleSubmit: (sale: Sale) => void;
+  onSaleSubmit: (sale: Omit<Sale, 'id' | 'userId' | 'commissionStatus'>, id?:string) => Promise<Sale | null>;
   onDeleteSale: (saleId: string) => void;
   corretores: Corretor[];
   clients: Client[];
-  onClientSubmit: (client: Client) => void;
+  onClientSubmit: (client: Omit<Client, 'id' | 'userId'>) => Promise<Client | null>;
   developments: Development[];
-  onDevelopmentSubmit: (dev: Development) => void;
+  onDevelopmentSubmit: (dev: Omit<Development, 'id' | 'userId'>) => Promise<Development | null>;
   corretoresMap: Record<string, Corretor>;
   clientsMap: Record<string, Client>;
   developmentsMap: Record<string, Development>;

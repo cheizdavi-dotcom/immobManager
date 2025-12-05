@@ -13,8 +13,11 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
+import { useMemo, useState, useEffect } from 'react';
+import { getClients } from '@/app/(app)/clientes/actions';
+import { getDevelopments } from '@/app/(app)/empreendimentos/actions';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import { useMemo } from 'react';
+import type { User } from '@/lib/types';
 
 
 type SalesHistoryDialogProps = {
@@ -39,24 +42,26 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
 
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
-    const [clientsData] = useLocalStorage<Client[]>('clients', []);
-    const [developmentsData] = useLocalStorage<Development[]>('developments', []);
+    const [user] = useLocalStorage<User | null>('user', null);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [developments, setDevelopments] = useState<Development[]>([]);
 
-    const clientsMap = useMemo(() => {
-        if (!clientsData) return {};
-        return clientsData.reduce((acc, client) => {
-            acc[client.id] = client;
-            return acc;
-        }, {} as Record<string, Client>);
-    }, [clientsData]);
+     useEffect(() => {
+        if (isOpen && user?.id) {
+            const fetchData = async () => {
+                const [clientsData, developmentsData] = await Promise.all([
+                    getClients(user.id),
+                    getDevelopments(user.id),
+                ]);
+                setClients(clientsData);
+                setDevelopments(developmentsData);
+            };
+            fetchData();
+        }
+    }, [isOpen, user?.id]);
 
-    const developmentsMap = useMemo(() => {
-        if (!developmentsData) return {};
-        return developmentsData.reduce((acc, dev) => {
-            acc[dev.id] = dev;
-            return acc;
-        }, {} as Record<string, Development>);
-    }, [developmentsData]);
+    const clientsMap = useMemo(() => clients.reduce((acc, client) => ({...acc, [client.id]: client }), {} as Record<string, Client>), [clients]);
+    const developmentsMap = useMemo(() => developments.reduce((acc, dev) => ({...acc, [dev.id]: dev }), {} as Record<string, Development>), [developments]);
 
   if (!corretor) return null;
 

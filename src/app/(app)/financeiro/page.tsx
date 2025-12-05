@@ -1,16 +1,20 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiCard } from '@/components/kpi-card';
-import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
+import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { Sale, Corretor, CommissionStatus, Client, Development } from '@/lib/types';
+import type { Sale, Corretor, CommissionStatus, Client, Development, User } from '@/lib/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { getSales, updateSale } from '../vendas/actions';
+import { getCorretores } from '../corretores/actions';
+import { getClients } from '../clientes/actions';
+import { getDevelopments } from '../empreendimentos/actions';
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
   variants: {
@@ -35,11 +39,42 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function FinanceiroPage() {
-    const [sales, setSales] = useLocalStorage<Sale[]>('sales', []);
-    const [corretores] = useLocalStorage<Corretor[]>('corretores', []);
-    const [clients] = useLocalStorage<Client[]>('clients', []);
-    const [developments] = useLocalStorage<Development[]>('developments', []);
+    const [user] = useLocalStorage<User | null>('user', null);
+    const [sales, setSales] = useState<Sale[]>([]);
+    const [corretores, setCorretores] = useState<Corretor[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [developments, setDevelopments] = useState<Development[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+
+    const fetchData = useCallback(async () => {
+        if (!user?.id) {
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const [salesData, corretoresData, clientsData, developmentsData] = await Promise.all([
+                getSales(user.id),
+                getCorretores(user.id),
+                getClients(user.id),
+                getDevelopments(user.id),
+            ]);
+            setSales(salesData);
+            setCorretores(corretoresData);
+            setClients(clientsData);
+            setDevelopments(developmentsData);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Erro ao carregar dados financeiros', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user?.id, toast]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
 
     const financialMetrics = useMemo(() => {
         if (!sales) return { vgvTotalGeral: 0, comissoesPagas: 0, comissoesAPagar: 0, lucroBrutoPotencial: 0 };
@@ -70,54 +105,112 @@ export default function FinanceiroPage() {
             .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
     }, [sales]);
 
-    const getCorretorName = (corretorId: string) => {
-        return corretores?.find(c => c.id === corretorId)?.name || 'N/A';
-    }
-    const getClientName = (clientId: string) => {
-        return clients?.find(c => c.id === clientId)?.name || 'N/A';
-    }
-    const getDevelopmentName = (devId: string) => {
-        return developments?.find(d => d.id === devId)?.name || 'N/A';
-    }
+    const corretoresMap = useMemo(() => corretores.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [corretores]);
+    const clientsMap = useMemo(() => clients.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [clients]);
+    const developmentsMap = useMemo(() => developments.reduce((acc, d) => ({ ...acc, [d.id]: d.name }), {} as Record<string, string>), [developments]);
 
-
-    const toggleCommissionStatus = (saleId: string) => {
-        setSales((prevSales) => {
-            return prevSales.map((sale) => {
-                if (sale.id === saleId) {
-                    if (sale.status === 'Venda Cancelada / Caiu') {
-                         toast({
-                            variant: "destructive",
-                            title: "Ação Bloqueada",
-                            description: `Não é possível pagar comissão de uma venda cancelada.`
-                        });
-                        return sale;
-                    }
-                    const newStatus: CommissionStatus = sale.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
-                    toast({
-                        title: "Status da Comissão Alterado!",
-                        description: `A comissão foi marcada como ${newStatus.toLowerCase()}.`
-                    })
-                    return { ...sale, commissionStatus: newStatus };
-                }
-                return sale;
+    const toggleCommissionStatus = async (sale: Sale) => {
+        if (!user?.id) return;
+        if (sale.status === 'Venda Cancelada / Caiu') {
+            toast({
+                variant: "destructive",
+                title: "Ação Bloqueada",
+                description: `Não é possível pagar comissão de uma venda cancelada.`
             });
-        });
+            return;
+        }
+
+        const newStatus: CommissionStatus = sale.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
+        const optimisticUpdatedSales = sales.map(s => s.id === sale.id ? { ...s, commissionStatus: newStatus } : s);
+        setSales(optimisticUpdatedSales);
+
+        try {
+            await updateSale({ ...sale, commissionStatus: newStatus }, user.id);
+             toast({
+                title: "Status da Comissão Alterado!",
+                description: `A comissão foi marcada como ${newStatus.toLowerCase()}.`
+            });
+             await fetchData();
+        } catch (error: any) {
+            setSales(sales); // Revert on error
+            toast({ variant: 'destructive', title: 'Erro ao atualizar status.', description: error.message });
+        }
     };
 
 
-    if (sales.length === 0) {
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Carregando dados financeiros...</p>
+                </div>
+            )
+        }
+
+        if (sales.length === 0) {
+            return (
+                <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
+                    <div className="flex flex-col items-center gap-2">
+                    <Banknote className="h-16 w-16 text-muted-foreground" />
+                    <h2 className="text-2xl font-semibold">Nenhum dado financeiro</h2>
+                    <p className="text-muted-foreground">
+                        As informações financeiras de vendas cadastradas aparecerão aqui.
+                    </p>
+                    </div>
+                </main>
+            );
+        }
+
         return (
-        <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
-            <div className="flex flex-col items-center gap-2">
-            <Banknote className="h-16 w-16 text-muted-foreground" />
-            <h2 className="text-2xl font-semibold">Nenhum dado financeiro</h2>
-            <p className="text-muted-foreground">
-                As informações financeiras de vendas cadastradas aparecerão aqui.
-            </p>
-            </div>
-        </main>
-        );
+            <Card>
+                <CardHeader>
+                    <CardTitle>Controle de Comissões</CardTitle>
+                    <CardDescription>Gerencie o status de pagamento das comissões de cada venda cadastrada.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className='hover:bg-card'>
+                                <TableHead>Data Venda</TableHead>
+                                <TableHead>Corretor</TableHead>
+                                <TableHead>Referente à Venda</TableHead>
+                                <TableHead>Status da Venda</TableHead>
+                                <TableHead className="text-right">Valor Comissão</TableHead>
+                                <TableHead className="text-center pr-6">Status Pagamento</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {commissionsToDisplay.map(sale => (
+                                <TableRow 
+                                    key={sale.id}
+                                    className={cn('border-x-0', sale.status === 'Venda Cancelada / Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
+                                >
+                                    <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
+                                    <TableCell>{corretoresMap[sale.corretorId] || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        <div className="font-medium">{developmentsMap[sale.developmentId] || 'N/A'}</div>
+                                        <div className={cn("text-sm", sale.status !== 'Venda Cancelada / Caiu' ? "text-muted-foreground" : "text-inherit")}>{clientsMap[sale.clientId] || 'N/A'}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge className={saleStatusBadgeVariants({status: sale.status})}>{sale.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold">{formatCurrency(sale.commission)}</TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge 
+                                            className={commissionStatusBadgeVariants({status: sale.commissionStatus})}
+                                            onClick={() => toggleCommissionStatus(sale)}
+                                        >
+                                            {sale.commissionStatus}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        )
     }
 
   return (
@@ -151,53 +244,7 @@ export default function FinanceiroPage() {
             />
       </div>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Controle de Comissões</CardTitle>
-            <CardDescription>Gerencie o status de pagamento das comissões de cada venda cadastrada.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow className='hover:bg-card'>
-                        <TableHead>Data Venda</TableHead>
-                        <TableHead>Corretor</TableHead>
-                        <TableHead>Referente à Venda</TableHead>
-                        <TableHead>Status da Venda</TableHead>
-                        <TableHead className="text-right">Valor Comissão</TableHead>
-                        <TableHead className="text-center pr-6">Status Pagamento</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {commissionsToDisplay.map(sale => (
-                        <TableRow 
-                            key={sale.id}
-                            className={cn('border-x-0', sale.status === 'Venda Cancelada / Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
-                        >
-                            <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
-                            <TableCell>{getCorretorName(sale.corretorId)}</TableCell>
-                            <TableCell>
-                                <div className="font-medium">{getDevelopmentName(sale.developmentId)}</div>
-                                <div className={cn("text-sm", sale.status !== 'Venda Cancelada / Caiu' ? "text-muted-foreground" : "text-inherit")}>{getClientName(sale.clientId)}</div>
-                            </TableCell>
-                            <TableCell>
-                                <Badge className={saleStatusBadgeVariants({status: sale.status})}>{sale.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-semibold">{formatCurrency(sale.commission)}</TableCell>
-                            <TableCell className="text-center">
-                                <Badge 
-                                    className={commissionStatusBadgeVariants({status: sale.commissionStatus})}
-                                    onClick={() => toggleCommissionStatus(sale.id)}
-                                >
-                                    {sale.commissionStatus}
-                                </Badge>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </CardContent>
-      </Card>
+        {renderContent()}
 
     </main>
   );

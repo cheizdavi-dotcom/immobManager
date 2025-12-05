@@ -1,9 +1,9 @@
 'use client';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import type { Sale, Corretor, Client, Development } from '@/lib/types';
-import { useMemo, useEffect } from 'react';
+import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { KpiCard } from '@/components/kpi-card';
-import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
 import { BuilderMixChart } from '@/components/builder-mix-chart';
@@ -11,13 +11,47 @@ import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
 import { subDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { getSales } from '../vendas/actions';
+import { getCorretores } from '../corretores/actions';
+import { getClients } from '../clientes/actions';
+import { getDevelopments } from '../empreendimentos/actions';
 
 export default function DashboardPage() {
-    const [sales] = useLocalStorage<Sale[]>('sales', []);
-    const [corretores] = useLocalStorage<Corretor[]>('corretores', []);
-    const [clients] = useLocalStorage<Client[]>('clients', []);
-    const [developments] = useLocalStorage<Development[]>('developments', []);
+    const [user] = useLocalStorage<User | null>('user', null);
+    const [sales, setSales] = useState<Sale[]>([]);
+    const [corretores, setCorretores] = useState<Corretor[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [developments, setDevelopments] = useState<Development[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+
+    const fetchData = useCallback(async () => {
+        if (!user?.id) {
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const [salesData, corretoresData, clientsData, developmentsData] = await Promise.all([
+                getSales(user.id),
+                getCorretores(user.id),
+                getClients(user.id),
+                getDevelopments(user.id),
+            ]);
+            setSales(salesData);
+            setCorretores(corretoresData);
+            setClients(clientsData);
+            setDevelopments(developmentsData);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Erro ao carregar o dashboard', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user?.id, toast]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     useEffect(() => {
         const showToast = localStorage.getItem('showLoginSuccessToast');
@@ -138,7 +172,17 @@ export default function DashboardPage() {
         }, {} as Record<string, Development>);
     }, [developments]);
 
-    if (sales.length === 0) {
+    if (isLoading) {
+        return (
+            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-muted-foreground">Carregando dashboard...</p>
+            </main>
+        );
+    }
+
+
+    if (!isLoading && sales.length === 0) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
                  <div className="flex flex-col items-center gap-2">
@@ -189,7 +233,7 @@ export default function DashboardPage() {
                     <BuilderMixChart data={builderMixData} />
                 </div>
                 <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-8">
-                     <AgendaWidget sales={sales || []} clientsMap={clientsMap} />
+                     <AgendaWidget sales={sales} clientsMap={clientsMap} />
                      <AttentionList sales={attentionSales} corretoresMap={corretoresMap} clientsMap={clientsMap} developmentsMap={developmentsMap} />
                 </div>
             </div>

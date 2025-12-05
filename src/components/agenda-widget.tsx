@@ -12,27 +12,27 @@ import { isToday, isTomorrow, format, parseISO, startOfToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import useLocalStorage from '@/hooks/useLocalStorage';
 
-export function AgendaWidget() {
-    const [sales] = useLocalStorage<Sale[]>('sales', []);
-    const [clients] = useLocalStorage<Client[]>('clients', []);
+type AgendaWidgetProps = {
+  sales: Sale[];
+  clientsMap: Record<string, Client>;
+};
 
-    const clientsMap = useMemo(() => {
-        if (!clients) return {};
-        return clients.reduce((acc, client) => {
-            acc[client.id] = client;
-            return acc;
-        }, {} as Record<string, Client>);
-    }, [clients]);
+export function AgendaWidget({ sales, clientsMap }: AgendaWidgetProps) {
 
   const upcomingTasks = useMemo(() => {
+    if (!sales || !clientsMap) return [];
+    
     const today = startOfToday();
     return sales
       .filter((sale) => {
         if (!sale.combinadoDate) return false;
-        const combinadoDate = parseISO(sale.combinadoDate as unknown as string);
-        return combinadoDate >= today;
+        try {
+            const combinadoDate = parseISO(sale.combinadoDate as unknown as string);
+            return combinadoDate >= today;
+        } catch (e) {
+            return false;
+        }
       })
       .map((sale) => {
         const combinadoDate = parseISO(sale.combinadoDate as unknown as string);
