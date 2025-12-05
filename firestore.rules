@@ -16,19 +16,26 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow read, list: if isSignedIn();
+      // Allow reading a single document if the user is the owner.
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Allow listing documents only if the query is filtered by the user's ID.
+      allow list: if isSignedIn() && request.query.where.get('userId', '') == request.auth.uid;
+      // Allow creating, updating, or deleting if the user is the owner.
       allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     match /corretores/{corretorId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.get('userId', '') == request.auth.uid;
       allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     match /developments/{developmentId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.get('userId', '') == request.auth.uid;
       allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     match /sales/{saleId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.get('userId', '') == request.auth.uid;
       allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
   }
