@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cva } from 'class-variance-authority';
+import { clients as initialClients } from '@/lib/data';
 
 const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
   variants: {
@@ -31,7 +32,7 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 
 export default function ClientesPage() {
   const [user] = useLocalStorage<User | null>('user', null);
-  const [allClients, setAllClients] = useLocalStorage<Client[]>('clients', []);
+  const [allClients, setAllClients] = useLocalStorage<Client[]>('clients', initialClients);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
