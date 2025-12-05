@@ -7,32 +7,15 @@ import { NewCorretorDialog } from '@/components/new-corretor-dialog';
 import type { Corretor, Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
-import { useState, useMemo } from 'react';
+import useLocalStorage from '@/hooks/useLocalStorage';
+import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function CorretoresPage() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-
-  const corretoresQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-
-  const salesQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-
-  const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
-  const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
-
+  const [corretores, setCorretores] = useLocalStorage<Corretor[]>('corretores', []);
+  const [sales, setSales] = useLocalStorage<Sale[]>('sales', []);
   const [editingCorretor, setEditingCorretor] = useState<Corretor | null>(null);
   const [isNewCorretorDialogOpen, setIsNewCorretorDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
@@ -40,14 +23,16 @@ export default function CorretoresPage() {
   const { toast } = useToast();
 
   const addOrUpdateCorretor = (corretor: Corretor) => {
-    if (!firestore || !user?.uid) return;
-    const corretorRef = doc(firestore, 'corretores', corretor.id);
-    const dataToSave = { ...corretor, userId: user.uid };
-    setDocumentNonBlocking(corretorRef, dataToSave, { merge: true });
+    setCorretores((prev) => {
+      const existing = prev.find((c) => c.id === corretor.id);
+      if (existing) {
+        return prev.map((c) => (c.id === corretor.id ? corretor : c));
+      }
+      return [...prev, corretor];
+    });
   };
 
   const deleteCorretor = (corretorId: string) => {
-    if (!sales || !firestore) return;
     const salesFromCorretor = sales.find(s => s.corretorId === corretorId);
     if(salesFromCorretor){
        toast({
@@ -57,8 +42,7 @@ export default function CorretoresPage() {
       });
       return;
     }
-    const corretorRef = doc(firestore, 'corretores', corretorId);
-    deleteDocumentNonBlocking(corretorRef);
+    setCorretores((prev) => prev.filter((c) => c.id !== corretorId));
     toast({
         title: "Corretor Excluído!",
         description: "O corretor foi removido da sua equipe.",
@@ -76,31 +60,14 @@ export default function CorretoresPage() {
   }
 
   const getCorretorKPIs = (corretorId: string) => {
-    if (!sales) return { totalVendido: 0, vendasRealizadas: 0 };
     const corretorSales = sales.filter(s => s.corretorId === corretorId && s.status === 'Venda Concluída / Paga');
     const totalVendido = corretorSales.reduce((acc, sale) => acc + sale.saleValue, 0);
     const vendasRealizadas = corretorSales.length;
     return { totalVendido, vendasRealizadas };
   }
 
-  const isLoading = isUserLoading || (corretoresQuery && isLoadingCorretores) || (salesQuery && isLoadingSales);
 
-  if (isLoading) {
-    return (
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-10 w-36" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-xl" />)}
-        </div>
-      </main>
-    );
-  }
-
-
-  if (!corretores || corretores.length === 0) {
+  if (corretores.length === 0) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
         <div className="flex flex-col items-center gap-2">
@@ -213,7 +180,7 @@ export default function CorretoresPage() {
             isOpen={isHistoryDialogOpen}
             onOpenChange={setIsHistoryDialogOpen}
             corretor={selectedCorretor}
-            sales={sales?.filter(s => s.corretorId === selectedCorretor.id) || []}
+            sales={sales.filter(s => s.corretorId === selectedCorretor.id)}
         />
       )}
     </main>

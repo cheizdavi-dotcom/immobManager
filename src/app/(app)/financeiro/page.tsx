@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiCard } from '@/components/kpi-card';
 import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, CommissionStatus, Client, Development } from '@/lib/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,10 +11,6 @@ import { format } from 'date-fns';
 import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo } from 'react';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, query, where } from "firebase/firestore";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
   variants: {
@@ -38,39 +35,10 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function FinanceiroPage() {
-    const { user, isUserLoading } = useUser();
-    const firestore = useFirestore();
-
-    const salesQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
-
-    const corretoresQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
-
-    const clientsQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
-    
-    const developmentsQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
-
-    const isLoading = isUserLoading || 
-                      (salesQuery && isLoadingSales) || 
-                      (corretoresQuery && isLoadingCorretores) || 
-                      (clientsQuery && isLoadingClients) || 
-                      (developmentsQuery && isLoadingDevs);
-
+    const [sales, setSales] = useLocalStorage<Sale[]>('sales', []);
+    const [corretores] = useLocalStorage<Corretor[]>('corretores', []);
+    const [clients] = useLocalStorage<Client[]>('clients', []);
+    const [developments] = useLocalStorage<Development[]>('developments', []);
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {
@@ -113,58 +81,32 @@ export default function FinanceiroPage() {
     }
 
 
-    const toggleCommissionStatus = (sale: Sale) => {
-        if (sale?.status === 'Venda Cancelada / Caiu') {
-             toast({
-                variant: "destructive",
-                title: "Ação Bloqueada",
-                description: `Não é possível pagar comissão de uma venda cancelada.`
+    const toggleCommissionStatus = (saleId: string) => {
+        setSales((prevSales) => {
+            return prevSales.map((sale) => {
+                if (sale.id === saleId) {
+                    if (sale.status === 'Venda Cancelada / Caiu') {
+                         toast({
+                            variant: "destructive",
+                            title: "Ação Bloqueada",
+                            description: `Não é possível pagar comissão de uma venda cancelada.`
+                        });
+                        return sale;
+                    }
+                    const newStatus: CommissionStatus = sale.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
+                    toast({
+                        title: "Status da Comissão Alterado!",
+                        description: `A comissão foi marcada como ${newStatus.toLowerCase()}.`
+                    })
+                    return { ...sale, commissionStatus: newStatus };
+                }
+                return sale;
             });
-            return;
-        }
-
-        const newStatus: CommissionStatus = sale.commissionStatus === 'Pendente' ? 'Pago' : 'Pendente';
-        const updatedSale = { ...sale, commissionStatus: newStatus };
-
-        if (!firestore) return;
-        const saleRef = doc(firestore, 'sales', sale.id);
-        setDocumentNonBlocking(saleRef, updatedSale, { merge: true });
-
-        toast({
-            title: "Status da Comissão Alterado!",
-            description: `A comissão foi marcada como ${newStatus.toLowerCase()}.`
-        })
+        });
     };
 
 
-    if (isLoading) {
-        return (
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Skeleton className="h-8 w-48 mb-2" />
-                        <Skeleton className="h-5 w-80" />
-                    </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-                     {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-[108px] w-full" />)}
-                </div>
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-64 mb-2" />
-                        <Skeleton className="h-5 w-96" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-                        </div>
-                    </CardContent>
-                </Card>
-            </main>
-        )
-    }
-
-    if (!sales || sales.length === 0) {
+    if (sales.length === 0) {
         return (
         <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
             <div className="flex flex-col items-center gap-2">
@@ -245,7 +187,7 @@ export default function FinanceiroPage() {
                             <TableCell className="text-center">
                                 <Badge 
                                     className={commissionStatusBadgeVariants({status: sale.commissionStatus})}
-                                    onClick={() => toggleCommissionStatus(sale)}
+                                    onClick={() => toggleCommissionStatus(sale.id)}
                                 >
                                     {sale.commissionStatus}
                                 </Badge>

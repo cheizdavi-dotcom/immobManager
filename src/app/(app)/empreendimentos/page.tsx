@@ -1,7 +1,6 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { useState } from 'react';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
   TableBody,
@@ -17,38 +16,26 @@ import { NewDevelopmentDialog } from '@/components/new-development-dialog';
 import type { Development } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EmpreendimentosPage() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-
-  const developmentsQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-
-  const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
-
-  const isLoading = isUserLoading || (developmentsQuery && isLoadingDevs);
-
+  const [developments, setDevelopments] = useLocalStorage<Development[]>('developments', []);
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const addOrUpdateDevelopment = (development: Development) => {
-    if (!firestore || !user?.uid) return;
-    const devRef = doc(firestore, 'developments', development.id);
-    const dataToSave = { ...development, userId: user.uid };
-    setDocumentNonBlocking(devRef, dataToSave, { merge: true });
+    setDevelopments((prev) => {
+      const existing = prev.find((d) => d.id === development.id);
+      if (existing) {
+        return prev.map((d) => (d.id === development.id ? development : d));
+      }
+      return [...prev, development];
+    });
   };
 
   const deleteDevelopment = (developmentId: string) => {
-    if (!firestore) return;
     // TODO: Add logic to check if development is associated with a sale before deleting
-    const devRef = doc(firestore, 'developments', developmentId);
-    deleteDocumentNonBlocking(devRef);
+    setDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
     toast({
       title: 'Empreendimento Excluído!',
       description: 'O empreendimento foi removido da sua lista.',
@@ -71,19 +58,7 @@ export default function EmpreendimentosPage() {
   }
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="p-6">
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-      )
-    }
-
-    if (!developments || developments.length === 0) {
+    if (developments.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
             <Building className="h-16 w-16 text-muted-foreground" />

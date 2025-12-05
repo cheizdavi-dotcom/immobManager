@@ -32,8 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useUser, useAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 const menuItems = [
   {
@@ -68,14 +67,19 @@ const menuItems = [
   },
 ];
 
+type User = {
+    name: string;
+    email: string;
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user } = useUser();
-  const auth = useAuth();
+  const [currentUser] = useLocalStorage<User | null>('currentUser', null);
+  const [, setIsAuthenticated] = useLocalStorage('isAuthenticated', false);
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  const handleLogout = () => {
+    setIsAuthenticated(false);
     router.push('/auth');
   };
 
@@ -112,18 +116,18 @@ export function AppSidebar() {
             <button className="flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-sidebar-accent">
               <div className="flex items-center gap-3 overflow-hidden">
                 <Avatar className="size-8">
-                  <AvatarImage src={user?.photoURL || PlaceHolderImages[0].imageUrl} alt="User" />
-                  <AvatarFallback>{user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'A'}</AvatarFallback>
+                  <AvatarImage src={PlaceHolderImages[0].imageUrl} alt="User" />
+                  <AvatarFallback>{currentUser?.name?.charAt(0) || currentUser?.email?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
                 <span className="truncate text-sm font-medium">
-                  {user?.displayName || user?.email || 'Admin'}
+                  {currentUser?.name || currentUser?.email || 'Admin'}
                 </span>
               </div>
               <ChevronDown className="size-4 shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" side="top" align="start">
-            <DropdownMenuLabel>{user?.email || 'Minha Conta'}</DropdownMenuLabel>
+            <DropdownMenuLabel>{currentUser?.email || 'Minha Conta'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled>Perfil</DropdownMenuItem>
             <DropdownMenuItem disabled>Configurações</DropdownMenuItem>

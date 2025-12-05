@@ -1,7 +1,6 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { useState } from 'react';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
   TableBody,
@@ -19,8 +18,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cva } from 'class-variance-authority';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
   variants: {
@@ -33,34 +30,24 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function ClientesPage() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-
-  const clientsQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-
-  const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
-  
-  const isLoading = isUserLoading || (clientsQuery && isLoadingClients);
-
+  const [clients, setClients] = useLocalStorage<Client[]>('clients', []);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const addOrUpdateClient = (client: Client) => {
-    if (!firestore || !user?.uid) return;
-    const clientRef = doc(firestore, 'clients', client.id);
-    const dataToSave = { ...client, userId: user.uid };
-    setDocumentNonBlocking(clientRef, dataToSave, { merge: true });
+    setClients((prevClients) => {
+      const existingClient = prevClients.find((c) => c.id === client.id);
+      if (existingClient) {
+        return prevClients.map((c) => (c.id === client.id ? client : c));
+      }
+      return [...prevClients, client];
+    });
   };
 
   const deleteClient = (clientId: string) => {
-    if (!firestore) return;
     // TODO: Add logic to check if client is associated with a sale before deleting
-    const clientRef = doc(firestore, 'clients', clientId);
-    deleteDocumentNonBlocking(clientRef);
+    setClients((prev) => prev.filter((c) => c.id !== clientId));
     toast({
       title: 'Cliente Excluído!',
       description: 'O cliente foi removido da sua lista.',
@@ -83,19 +70,7 @@ export default function ClientesPage() {
   }
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="p-6">
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-      )
-    }
-
-    if (!clients || clients.length === 0) {
+    if (clients.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
            <Users className="h-16 w-16 text-muted-foreground" />

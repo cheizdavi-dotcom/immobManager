@@ -17,11 +17,9 @@ import * as z from 'zod';
 import { type Development } from '@/lib/types';
 import { useEffect, type ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase';
 
 const developmentSchema = z.object({
   id: z.string().optional(),
-  userId: z.string().optional(),
   name: z.string().min(1, 'O nome é obrigatório.'),
   construtora: z.string().min(1, 'A construtora é obrigatória.'),
   localizacao: z.string().min(1, 'A localização é obrigatória.'),
@@ -44,7 +42,6 @@ export function NewDevelopmentDialog({
   onOpenChange,
   children,
 }: NewDevelopmentDialogProps) {
-  const { user } = useUser();
   const { toast } = useToast();
   const isEditing = !!development;
 
@@ -78,18 +75,10 @@ export function NewDevelopmentDialog({
   }, [development, isEditing, reset, isOpen]);
 
   const onSubmit = (data: DevelopmentFormValues) => {
-    if (!user) {
-        toast({
-            variant: 'destructive',
-            title: 'Erro de Autenticação',
-            description: 'Você precisa estar logado para criar um empreendimento.',
-        });
-        return;
-    }
     const finalData: Development = {
       ...data,
       id: development?.id || new Date().toISOString(),
-      userId: user.uid,
+      userId: 'local-user', // Placeholder for local development
     };
     onDevelopmentSubmit(finalData);
     toast({

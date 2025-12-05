@@ -12,13 +12,20 @@ import { isToday, isTomorrow, format, parseISO, startOfToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
-type AgendaWidgetProps = {
-  sales: Sale[];
-  clientsMap: Record<string, Client>;
-};
+export function AgendaWidget() {
+    const [sales] = useLocalStorage<Sale[]>('sales', []);
+    const [clients] = useLocalStorage<Client[]>('clients', []);
 
-export function AgendaWidget({ sales, clientsMap }: AgendaWidgetProps) {
+    const clientsMap = useMemo(() => {
+        if (!clients) return {};
+        return clients.reduce((acc, client) => {
+            acc[client.id] = client;
+            return acc;
+        }, {} as Record<string, Client>);
+    }, [clients]);
+
   const upcomingTasks = useMemo(() => {
     const today = startOfToday();
     return sales

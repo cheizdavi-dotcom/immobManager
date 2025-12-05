@@ -13,9 +13,8 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import { useMemo } from 'react';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
 
 
 type SalesHistoryDialogProps = {
@@ -40,20 +39,8 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs whitespace-now
 
 
 export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: SalesHistoryDialogProps) {
-    const { user } = useUser();
-    const firestore = useFirestore();
-
-    const clientsQuery = useMemo(() => {
-      if (!user?.uid || !firestore) return null;
-      return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: clientsData } = useCollection<Client>(clientsQuery);
-
-    const developmentsQuery = useMemo(() => {
-      if (!user?.uid || !firestore) return null;
-      return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: developmentsData } = useCollection<Development>(developmentsQuery);
+    const [clientsData] = useLocalStorage<Client[]>('clients', []);
+    const [developmentsData] = useLocalStorage<Development[]>('developments', []);
 
     const clientsMap = useMemo(() => {
         if (!clientsData) return {};

@@ -1,6 +1,5 @@
 'use client';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { useMemo } from 'react';
 import { KpiCard } from '@/components/kpi-card';
@@ -11,41 +10,12 @@ import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
 import { subDays } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-    const { user, isUserLoading } = useUser();
-    const firestore = useFirestore();
-
-    const salesQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
-
-    const corretoresQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
-
-    const clientsQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
-    
-    const developmentsQuery = useMemo(() => {
-        if (!user?.uid || !firestore) return null;
-        return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-    }, [user?.uid, firestore]);
-    const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
-
-    const isLoading = isUserLoading || 
-                      (salesQuery && isLoadingSales) || 
-                      (corretoresQuery && isLoadingCorretores) || 
-                      (clientsQuery && isLoadingClients) || 
-                      (developmentsQuery && isLoadingDevs);
+    const [sales] = useLocalStorage<Sale[]>('sales', []);
+    const [corretores] = useLocalStorage<Corretor[]>('corretores', []);
+    const [clients] = useLocalStorage<Client[]>('clients', []);
+    const [developments] = useLocalStorage<Development[]>('developments', []);
 
     const {
         faturamentoVendasPagas,
@@ -154,29 +124,7 @@ export default function DashboardPage() {
         }, {} as Record<string, Development>);
     }, [developments]);
 
-    if (isLoading) {
-       return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-             <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-[108px] w-full" />)}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
-                <div className="lg:col-span-2 grid grid-cols-1 gap-4 md:gap-8">
-                    <Skeleton className="h-[430px] w-full" />
-                    <Skeleton className="h-[430px] w-full" />
-                </div>
-                <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-8">
-                     <Skeleton className="h-[400px] w-full" />
-                     <Skeleton className="h-[400px] w-full" />
-                </div>
-            </div>
-        </main>
-       )
-    }
-
-
-    if (!sales || sales.length === 0) {
+    if (sales.length === 0) {
         return (
             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:gap-8 md:p-8">
                  <div className="flex flex-col items-center gap-2">

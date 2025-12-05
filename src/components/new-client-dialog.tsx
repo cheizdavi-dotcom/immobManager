@@ -24,11 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useUser } from '@/firebase';
 
 const clientSchema = z.object({
   id: z.string().optional(),
-  userId: z.string().optional(),
   name: z.string().min(1, 'O nome é obrigatório.'),
   phone: z.string().min(1, 'O telefone é obrigatório.'),
   cpf: z.string().optional(),
@@ -52,7 +50,6 @@ export function NewClientDialog({
   onOpenChange,
   children
 }: NewClientDialogProps) {
-  const { user } = useUser();
   const { toast } = useToast();
   const isEditing = !!client;
 
@@ -89,18 +86,10 @@ export function NewClientDialog({
   }, [client, isEditing, reset, isOpen]);
 
   const onSubmit = (data: ClientFormValues) => {
-    if (!user) {
-        toast({
-            variant: 'destructive',
-            title: 'Erro de Autenticação',
-            description: 'Você precisa estar logado para criar um cliente.',
-        });
-        return;
-    }
     const finalData: Client = {
       ...data,
       id: client?.id || new Date().toISOString(),
-      userId: user.uid,
+      userId: 'local-user', // Placeholder for local development
     };
     onClientSubmit(finalData);
     toast({

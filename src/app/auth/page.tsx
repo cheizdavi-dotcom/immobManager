@@ -14,15 +14,10 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
 import { Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  updateProfile
-} from 'firebase/auth';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido.'),
@@ -37,7 +32,10 @@ const registerSchema = z.object({
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const auth = useAuth();
+  const [accounts, setAccounts] = useLocalStorage<z.infer<typeof registerSchema>[]>('accounts', []);
+  const [, setIsAuthenticated] = useLocalStorage('isAuthenticated', false);
+  const [, setCurrentUser] = useLocalStorage('currentUser', null);
+
   const { toast } = useToast();
   const router = useRouter();
 
@@ -51,13 +49,16 @@ export default function AuthPage() {
     defaultValues: { name: '', email: '', password: '' },
   });
 
-  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
-    if (!auth) return;
-    try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
+    const account = accounts.find(
+      (acc) => acc.email === values.email && acc.password === values.password
+    );
+    if (account) {
+      setIsAuthenticated(true);
+      setCurrentUser({ name: account.name, email: account.email });
       toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
       router.push('/dashboard');
-    } catch (error: any) {
+    } else {
       toast({
         variant: 'destructive',
         title: 'Falha no login',
@@ -66,25 +67,24 @@ export default function AuthPage() {
     }
   };
 
-  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
-    if (!auth) return;
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      await updateProfile(userCredential.user, { displayName: values.name });
+  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
+    const existingAccount = accounts.find((acc) => acc.email === values.email);
+    if (existingAccount) {
       toast({
-        title: 'Cadastro realizado com sucesso!',
-        description: 'Você já pode fazer o login.',
-      });
-      loginForm.setValue('email', values.email); // Pre-fill email on login form
-      setIsLogin(true);
-      registerForm.reset();
-    } catch (error: any) {
-       toast({
         variant: 'destructive',
         title: 'Falha no cadastro',
-        description: error.code === 'auth/email-already-in-use' ? 'Este e-mail já está em uso.' : 'Ocorreu um erro.',
+        description: 'Este e-mail já está em uso.',
       });
+      return;
     }
+    setAccounts([...accounts, values]);
+    toast({
+      title: 'Cadastro realizado com sucesso!',
+      description: 'Você já pode fazer o login.',
+    });
+    loginForm.setValue('email', values.email);
+    setIsLogin(true);
+    registerForm.reset();
   };
 
   return (

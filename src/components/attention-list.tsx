@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { differenceInDays } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
+import useLocalStorage from '@/hooks/useLocalStorage';
+import { useMemo } from 'react';
 
 type AttentionListProps = {
   sales: Sale[];
@@ -20,11 +22,7 @@ type AttentionListProps = {
 
 export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMap }: AttentionListProps) {
   const sortedSales = [...sales].sort(
-    (a, b) => {
-        const dateA = a.saleDate?.toDate ? a.saleDate.toDate() : new Date(a.saleDate);
-        const dateB = b.saleDate?.toDate ? b.saleDate.toDate() : new Date(b.saleDate);
-        return dateB.getTime() - dateA.getTime();
-    }
+    (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
   );
 
   return (
@@ -42,7 +40,7 @@ export function AttentionList({ sales, corretoresMap, clientsMap, developmentsMa
         <div className="space-y-4">
           {sortedSales.length > 0 ? (
             sortedSales.map((sale) => {
-              const saleDate = sale.saleDate?.toDate ? sale.saleDate.toDate() : new Date(sale.saleDate);
+              const saleDate = new Date(sale.saleDate);
               const daysStopped = differenceInDays(new Date(), saleDate);
               const clientName = clientsMap[sale.clientId]?.name || 'N/A';
               const developmentName = developmentsMap[sale.developmentId]?.name || 'N/A';

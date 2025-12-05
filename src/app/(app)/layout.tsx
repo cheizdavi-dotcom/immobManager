@@ -8,32 +8,24 @@ import {
   SidebarTrigger,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { user, isUserLoading } = useUser();
+  const [isAuthenticated] = useLocalStorage('isAuthenticated', false);
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    if (!isAuthenticated) {
       router.replace('/auth');
     }
-  }, [isUserLoading, user, router]);
+  }, [isAuthenticated, router]);
 
-  if (isUserLoading || !user) {
+  if (!isAuthenticated) {
     return (
-        <div className="flex h-screen w-screen items-center justify-center p-8">
-            <div className="flex w-full h-full">
-              <Skeleton className="h-full w-64 rounded-xl" />
-              <div className="flex flex-col flex-1 pl-8 gap-8">
-                <Skeleton className="h-16 w-full rounded-xl" />
-                <Skeleton className="h-32 w-1/3 rounded-xl" />
-                <Skeleton className="h-full w-full rounded-xl" />
-              </div>
-            </div>
+        <div className="flex h-screen w-screen items-center justify-center">
+            <p>Redirecionando...</p>
         </div>
     );
   }

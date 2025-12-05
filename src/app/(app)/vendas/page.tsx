@@ -12,65 +12,37 @@ import {
 } from '@/components/ui/select';
 import { getYear, getMonth } from 'date-fns';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import { KanbanBoard } from '@/components/kanban-board';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function VendasPage() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
+  const [salesData, setSalesData] = useLocalStorage<Sale[]>('sales', []);
+  const [corretoresData] = useLocalStorage<Corretor[]>('corretores', []);
+  const [clientsData, setClientsData] = useLocalStorage<Client[]>('clients', []);
+  const [developmentsData, setDevelopmentsData] = useLocalStorage<Development[]>('developments', []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
-  
-  const salesQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-  const { data: salesData, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
-
-  const corretoresQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-  const { data: corretoresData, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
-
-  const clientsQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-  const { data: clientsData, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
-  
-  const developmentsQuery = useMemo(() => {
-    if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-  }, [user?.uid, firestore]);
-  const { data: developmentsData, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
   const addOrUpdateSale = (sale: Sale) => {
-    if (!firestore || !user?.uid) return;
-    const saleRef = doc(firestore, 'sales', sale.id);
-    const dataToSave = { ...sale, userId: user.uid };
-    // Firestore cannot store undefined values.
-    Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof Sale] === undefined) {
-        delete dataToSave[key as keyof Sale];
+    setSalesData((prevSales) => {
+      const existingSaleIndex = prevSales.findIndex((s) => s.id === sale.id);
+      if (existingSaleIndex !== -1) {
+        const updatedSales = [...prevSales];
+        updatedSales[existingSaleIndex] = sale;
+        return updatedSales;
       }
+      return [...prevSales, sale];
     });
-    setDocumentNonBlocking(saleRef, dataToSave, { merge: true });
   };
 
   const deleteSale = (saleId: string) => {
-    if (!firestore) return;
-    const saleRef = doc(firestore, 'sales', saleId);
-    deleteDocumentNonBlocking(saleRef);
+    setSalesData((prevSales) => prevSales.filter((s) => s.id !== saleId));
   };
 
 
@@ -91,7 +63,6 @@ export default function VendasPage() {
   }, [developmentsData]);
 
   const filteredSales = useMemo(() => {
-    if (!salesData) return [];
     return salesData.filter((sale) => {
         const saleDate = new Date(sale.saleDate);
         const saleMonth = getMonth(saleDate);
@@ -114,45 +85,30 @@ export default function VendasPage() {
   }, [salesData, searchTerm, monthFilter, yearFilter, construtoraFilter, clientsMap]);
 
   const uniqueYears = useMemo(() => {
-    if (!salesData) return [];
     return Array.from(
         new Set(salesData.map((sale) => getYear(new Date(sale.saleDate))))
     ).sort((a,b) => b - a)
   }, [salesData]);
 
   const uniqueConstrutoras = useMemo(() => {
-    if (!salesData) return [];
     return Array.from(
         new Set(salesData.map((dev) => dev.construtora).filter(Boolean))
   ).sort()
 }, [salesData]);
 
   const corretoresMap = useMemo(() => {
-    if (!corretoresData) return {};
     return corretoresData.reduce((acc, corretor) => {
         acc[corretor.id] = corretor;
         return acc;
     }, {} as Record<string, Corretor>);
   }, [corretoresData]);
 
-  const isLoading = isUserLoading || 
-                    (salesQuery && isLoadingSales) ||
-                    (corretoresQuery && isLoadingCorretores) ||
-                    (clientsQuery && isLoadingClients) ||
-                    (developmentsQuery && isLoadingDevs);
+  const addClient = (client: Client) => {
+    setClientsData(prev => [...prev, client]);
+  }
 
-  const addOrUpdateClient = (client: Client) => {
-    if (!firestore || !user?.uid) return;
-    const clientRef = doc(firestore, 'clients', client.id);
-    const dataToSave = { ...client, userId: user.uid };
-    setDocumentNonBlocking(clientRef, dataToSave, { merge: true });
-  };
-
-  const addOrUpdateDevelopment = (dev: Development) => {
-    if (!firestore || !user?.uid) return;
-    const devRef = doc(firestore, 'developments', dev.id);
-    const dataToSave = { ...dev, userId: user.uid };
-    setDocumentNonBlocking(devRef, dataToSave, { merge: true });
+  const addDevelopment = (dev: Development) => {
+    setDevelopmentsData(prev => [...prev, dev]);
   }
 
   return (
@@ -166,7 +122,7 @@ export default function VendasPage() {
                     <TabsTrigger value="tabela"><List className="h-4 w-4" /></TabsTrigger>
                     <TabsTrigger value="kanban"><LayoutGrid className="h-4 w-4" /></TabsTrigger>
                 </TabsList>
-                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData || []} clients={clientsData || []} onClientSubmit={addOrUpdateClient} developments={developmentsData || []} onDevelopmentSubmit={addOrUpdateDevelopment} />
+                <NewSaleDialog onSaleSubmit={addOrUpdateSale} corretores={corretoresData} clients={clientsData} onClientSubmit={addClient} developments={developmentsData} onDevelopmentSubmit={addDevelopment} />
             </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -214,47 +170,36 @@ export default function VendasPage() {
             </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            {isLoading ? (
-                <div className='flex flex-col gap-4'>
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                </div>
-            ) : (
-                <>
-                    <TabsContent value="tabela">
-                        <SalesTable 
-                            sales={filteredSales} 
-                            onSaleSubmit={addOrUpdateSale} 
-                            onDeleteSale={deleteSale}
-                            corretores={corretoresData || []}
-                            corretoresMap={corretoresMap}
-                            clientsMap={clientsMap}
-                            developmentsMap={developmentsMap}
-                            clients={clientsData || []}
-                            onClientSubmit={addOrUpdateClient}
-                            developments={developmentsData || []}
-                            onDevelopmentSubmit={addOrUpdateDevelopment}
-                        />
-                    </TabsContent>
-                    <TabsContent value="kanban" className="flex-1">
-                        <KanbanBoard 
-                            sales={filteredSales} 
-                            statuses={ALL_STATUSES}
-                            onSaleSubmit={addOrUpdateSale}
-                            corretoresMap={corretoresMap}
-                            clientsMap={clientsMap}
-                            developmentsMap={developmentsMap}
-                            corretores={corretoresData || []}
-                            clients={clientsData || []}
-                            developments={developmentsData || []}
-                            onClientSubmit={addOrUpdateClient}
-                            onDevelopmentSubmit={addOrUpdateDevelopment}
-                        />
-                    </TabsContent>
-                </>
-            )}
+            <TabsContent value="tabela">
+                <SalesTable 
+                    sales={filteredSales} 
+                    onSaleSubmit={addOrUpdateSale} 
+                    onDeleteSale={deleteSale}
+                    corretores={corretoresData}
+                    corretoresMap={corretoresMap}
+                    clientsMap={clientsMap}
+                    developmentsMap={developmentsMap}
+                    clients={clientsData}
+                    onClientSubmit={addClient}
+                    developments={developmentsData}
+                    onDevelopmentSubmit={addDevelopment}
+                />
+            </TabsContent>
+            <TabsContent value="kanban" className="flex-1">
+                <KanbanBoard 
+                    sales={filteredSales} 
+                    statuses={ALL_STATUSES}
+                    onSaleSubmit={addOrUpdateSale}
+                    corretoresMap={corretoresMap}
+                    clientsMap={clientsMap}
+                    developmentsMap={developmentsMap}
+                    corretores={corretoresData}
+                    clients={clientsData}
+                    developments={developmentsData}
+                    onClientSubmit={addClient}
+                    onDevelopmentSubmit={addDevelopment}
+                />
+            </TabsContent>
         </div>
        </Tabs>
     </main>
