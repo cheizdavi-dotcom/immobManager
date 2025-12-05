@@ -20,12 +20,11 @@ const dbPath = path.join(dbDir, 'database.db');
 // O 'better-sqlite3' cria o arquivo se ele não existir.
 const db = new Database(dbPath);
 
-// ---- INICIALIZAÇÃO DA TABELA DE USUÁRIOS ----
-// Este bloco de código garante que a tabela 'users' exista sempre que o app for iniciado.
-// Ele é executado apenas uma vez, quando este módulo é importado pela primeira vez.
+// ---- INICIALIZAÇÃO DAS TABELAS ----
+// Este bloco de código garante que as tabelas existam sempre que o app for iniciado.
 try {
-  // O comando SQL para criar a tabela 'users'
-  const createTableStmt = db.prepare(`
+  // Tabela de Usuários
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -36,15 +35,28 @@ try {
     )
   `);
   
-  // Executa o comando. 'run()' é usado para comandos que não retornam dados (como CREATE, INSERT, UPDATE).
-  createTableStmt.run();
+  // Tabela de Clientes
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      name TEXT NOT NULL,
+      phone TEXT,
+      cpf TEXT,
+      status TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
+    )
+  `);
+  
+  console.log('Tabelas de usuários e clientes inicializadas com sucesso.');
 
 } catch (error) {
   // Se houver qualquer erro durante a criação da tabela (ex: problema de permissão),
   // ele será logado no console.
-  console.error('Failed to create users table:', error);
+  console.error('Falha ao criar as tabelas:', error);
 }
 
 // Exporta a instância do banco de dados para ser usada em outras partes do aplicativo,
-// como nas API routes de login e registro.
+// como nas API routes e Server Actions.
 export default db;

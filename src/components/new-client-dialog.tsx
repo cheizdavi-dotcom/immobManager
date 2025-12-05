@@ -16,7 +16,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { type Client, ALL_CLIENT_STATUSES } from '@/lib/types';
 import { useState, useEffect, type ReactNode } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -24,9 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 
 const clientSchema = z.object({
-  id: z.string().optional(),
   name: z.string().min(1, 'O nome é obrigatório.'),
   phone: z.string().min(1, 'O telefone é obrigatório.'),
   cpf: z.string().optional(),
@@ -36,7 +35,7 @@ const clientSchema = z.object({
 type ClientFormValues = z.infer<typeof clientSchema>;
 
 type NewClientDialogProps = {
-  onClientSubmit: (client: Client) => void;
+  onClientSubmit: (client: ClientFormValues, id?: string) => Promise<Client | null>;
   client?: Client | null;
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
@@ -50,7 +49,7 @@ export function NewClientDialog({
   onOpenChange,
   children
 }: NewClientDialogProps) {
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!client;
 
   const {
@@ -72,10 +71,14 @@ export function NewClientDialog({
   useEffect(() => {
     if (isOpen) {
       if (isEditing && client) {
-        reset(client);
+        reset({
+          name: client.name,
+          phone: client.phone,
+          cpf: client.cpf,
+          status: client.status
+        });
       } else {
         reset({
-          id: undefined,
           name: '',
           phone: '',
           cpf: '',
@@ -85,18 +88,13 @@ export function NewClientDialog({
     }
   }, [client, isEditing, reset, isOpen]);
 
-  const onSubmit = (data: ClientFormValues) => {
-    const finalData: Client = {
-      ...data,
-      id: client?.id || new Date().toISOString(),
-      userId: 'local-user', // Placeholder for local development
-    };
-    onClientSubmit(finalData);
-    toast({
-      title: isEditing ? 'Cliente Atualizado!' : 'Cliente Cadastrado!',
-      description: `${data.name} foi salvo com sucesso.`,
-    });
-    if (onOpenChange) onOpenChange(false);
+  const onSubmit = async (data: ClientFormValues) => {
+    setIsSubmitting(true);
+    const result = await onClientSubmit(data, client?.id);
+    setIsSubmitting(false);
+    if (result && onOpenChange) {
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -112,17 +110,17 @@ export function NewClientDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome Completo</Label>
-            <Input id="name" {...register('name')} />
+            <Input id="name" {...register('name')} disabled={isSubmitting} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Telefone (com DDD)</Label>
-            <Input id="phone" placeholder="(XX) XXXXX-XXXX" {...register('phone')} />
+            <Input id="phone" placeholder="(XX) XXXXX-XXXX" {...register('phone')} disabled={isSubmitting} />
             {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="cpf">CPF (opcional)</Label>
-            <Input id="cpf" {...register('cpf')} />
+            <Input id="cpf" {...register('cpf')} disabled={isSubmitting} />
             {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
           </div>
           <div className="space-y-2">
@@ -131,7 +129,7 @@ export function NewClientDialog({
               name="status"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -149,7 +147,10 @@ export function NewClientDialog({
           </div>
 
           <DialogFooter>
-            <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Salvar Cliente'}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? (isEditing ? 'Salvando...' : 'Cadastrando...') : (isEditing ? 'Salvar Alterações' : 'Salvar Cliente')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

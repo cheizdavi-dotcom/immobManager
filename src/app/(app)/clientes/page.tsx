@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
@@ -11,13 +11,14 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit, Users, Phone } from 'lucide-react';
+import { Trash2, Edit, Users, Phone, Loader2 } from 'lucide-react';
 import { NewClientDialog } from '@/components/new-client-dialog';
-import type { Client } from '@/lib/types';
+import type { Client, User } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cva } from 'class-variance-authority';
+import { getClients, addOrUpdateClient, deleteClient as deleteClientAction } from './actions';
 
 const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
   variants: {
@@ -30,28 +31,63 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function ClientesPage() {
-  const [clients, setClients] = useLocalStorage<Client[]>('clients', []);
+  const [user] = useLocalStorage<User | null>('user', null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const addOrUpdateClient = (client: Client) => {
-    setClients((prevClients) => {
-      const existingClient = prevClients.find((c) => c.id === client.id);
-      if (existingClient) {
-        return prevClients.map((c) => (c.id === client.id ? client : c));
-      }
-      return [...prevClients, client];
-    });
+  useEffect(() => {
+    if (user?.id) {
+      setIsLoading(true);
+      getClients(user.id)
+        .then(data => setClients(data))
+        .catch(err => {
+            console.error(err);
+            toast({ variant: 'destructive', title: 'Erro ao buscar clientes.'});
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [user?.id, toast]);
+
+  const handleAddOrUpdateClient = async (client: Omit<Client, 'id' | 'userId'>, id?: string) => {
+    if (!user?.id) {
+        toast({ variant: 'destructive', title: 'Usuário não autenticado.' });
+        return;
+    }
+    
+    try {
+        const savedClient = await addOrUpdateClient(client, user.id, id);
+        setClients((prevClients) => {
+            const existingClient = prevClients.find((c) => c.id === savedClient.id);
+            if (existingClient) {
+                return prevClients.map((c) => (c.id === savedClient.id ? savedClient : c));
+            }
+            return [...prevClients, savedClient];
+        });
+        toast({
+            title: id ? 'Cliente Atualizado!' : 'Cliente Cadastrado!',
+            description: `${savedClient.name} foi salvo com sucesso.`,
+        });
+        return savedClient;
+    } catch(err) {
+        toast({ variant: 'destructive', title: 'Erro ao salvar cliente.' });
+        return null;
+    }
   };
 
-  const deleteClient = (clientId: string) => {
-    // TODO: Add logic to check if client is associated with a sale before deleting
-    setClients((prev) => prev.filter((c) => c.id !== clientId));
-    toast({
-      title: 'Cliente Excluído!',
-      description: 'O cliente foi removido da sua lista.',
-    });
+  const handleDeleteClient = async (clientId: string) => {
+    try {
+        await deleteClientAction(clientId);
+        setClients((prev) => prev.filter((c) => c.id !== clientId));
+        toast({
+            title: 'Cliente Excluído!',
+            description: 'O cliente foi removido da sua lista.',
+        });
+    } catch(err) {
+        toast({ variant: 'destructive', title: 'Erro ao excluir cliente.' });
+    }
   };
 
   const handleEdit = (client: Client) => {
@@ -70,6 +106,15 @@ export default function ClientesPage() {
   }
 
   const renderContent = () => {
+    if (isLoading) {
+        return (
+             <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-muted-foreground">Carregando clientes...</p>
+            </div>
+        )
+    }
+
     if (clients.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
@@ -128,7 +173,7 @@ export default function ClientesPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteClient(client.id)}>
+                        <AlertDialogAction onClick={() => handleDeleteClient(client.id)}>
                             Sim, excluir
                         </AlertDialogAction>
                         </AlertDialogFooter>
@@ -154,7 +199,7 @@ export default function ClientesPage() {
 
       <NewClientDialog
         client={editingClient}
-        onClientSubmit={addOrUpdateClient}
+        onClientSubmit={handleAddOrUpdateClient}
         isOpen={isDialogOpen}
         onOpenChange={handleDialogClose}
       />
