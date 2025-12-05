@@ -28,7 +28,24 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+       {
+        protocol: 'https',
+        hostname: 'i.pravatar.cc',
+        port: '',
+        pathname: '/**',
+      },
     ],
+  },
+   webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Force Next.js to use the CJS/Node build of Firebase Auth
+        // instead of the browser build, which causes the 'undici' error.
+        '@firebase/auth': require.resolve('@firebase/auth/dist/node-cjs/index.js'),
+      };
+    }
+    return config;
   },
 };
 
