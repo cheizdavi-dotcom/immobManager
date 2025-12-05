@@ -14,9 +14,6 @@ type ClientFormData = Omit<Client, 'id' | 'userId'>;
  * @returns Uma promessa que resolve para um array de clientes.
  */
 export async function getClients(userId: string): Promise<Client[]> {
-  if (!userId) {
-    throw new Error('Usuário não autenticado.');
-  }
   try {
     const stmt = db.prepare('SELECT * FROM clients WHERE userId = ? ORDER BY created_at DESC');
     const clients = stmt.all(userId) as Client[];
