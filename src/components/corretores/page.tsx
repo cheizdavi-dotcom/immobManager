@@ -1,7 +1,7 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Users, Phone, List, Trash2, Loader2, DollarSign, TrendingUp } from 'lucide-react';
+import { Users, Phone, List, Trash2, Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { NewCorretorDialog } from '@/components/new-corretor-dialog';
 import type { Corretor, Sale, User } from '@/lib/types';
