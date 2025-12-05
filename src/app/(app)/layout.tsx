@@ -9,9 +9,43 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { useUser } from '@/firebase';
+import { useEffect, useState, useContext } from 'react';
 import { Loader } from 'lucide-react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { FirebaseContext } from '../../firebase/provider';
+
+// HOOK MOVED HERE TO FIX IMPORT ISSUES
+function useAuth() {
+  const context = useContext(FirebaseContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within a FirebaseProvider');
+  }
+  return context.auth;
+}
+
+function useUser() {
+  const auth = useAuth();
+  const [userState, setUserState] = useState<{
+    data: User | null;
+    isLoading: boolean;
+  }>({
+    data: null,
+    isLoading: true,
+  });
+
+  useEffect(() => {
+    if (!auth) {
+        setUserState({ data: null, isLoading: false });
+        return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserState({ data: user, isLoading: false });
+    });
+    return () => unsubscribe();
+  }, [auth]);
+
+  return userState;
+}
 
 
 export default function AppLayout({ children }: { children: ReactNode }) {

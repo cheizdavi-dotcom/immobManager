@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,8 +17,8 @@ import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { FirebaseContext } from '../../firebase/provider';
 
 
 const loginSchema = z.object({
@@ -31,6 +31,16 @@ const registerSchema = z.object({
   email: z.string().email('E-mail inválido.'),
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
 });
+
+// HOOK MOVED HERE TO FIX IMPORT ISSUES
+function useAuth() {
+  const context = useContext(FirebaseContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within a FirebaseProvider');
+  }
+  return context.auth;
+}
+
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);

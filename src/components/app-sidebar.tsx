@@ -12,7 +12,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-
+import { useEffect, useState, useContext } from 'react';
 import {
   SidebarHeader,
   SidebarContent,
@@ -31,9 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useUser, useAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
-
+import { signOut, onAuthStateChanged, type User } from 'firebase/auth';
+import { FirebaseContext } from '../firebase/provider';
 
 const menuItems = [
   {
@@ -68,10 +67,43 @@ const menuItems = [
   },
 ];
 
+// HOOKS MOVED HERE TO FIX IMPORT ISSUES
+function useAuthFromContext() {
+  const context = useContext(FirebaseContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within a FirebaseProvider');
+  }
+  return context.auth;
+}
+
+function useUser() {
+  const auth = useAuthFromContext();
+  const [userState, setUserState] = useState<{
+    data: User | null;
+    isLoading: boolean;
+  }>({
+    data: null,
+    isLoading: true,
+  });
+
+  useEffect(() => {
+    if (!auth) {
+        setUserState({ data: null, isLoading: false });
+        return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserState({ data: user, isLoading: false });
+    });
+    return () => unsubscribe();
+  }, [auth]);
+
+  return userState;
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { data: user } = useUser();
-  const auth = useAuth();
+  const auth = useAuthFromContext();
   const router = useRouter();
 
   const handleLogout = async () => {
