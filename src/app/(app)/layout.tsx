@@ -8,57 +8,28 @@ import {
   SidebarTrigger,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader } from 'lucide-react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { FirebaseContext } from '../../firebase/provider';
-
-// HOOK MOVED HERE TO FIX IMPORT ISSUES
-function useAuth() {
-  const context = useContext(FirebaseContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within a FirebaseProvider');
-  }
-  return context.auth;
-}
-
-function useUser() {
-  const auth = useAuth();
-  const [userState, setUserState] = useState<{
-    data: User | null;
-    isLoading: boolean;
-  }>({
-    data: null,
-    isLoading: true,
-  });
-
-  useEffect(() => {
-    if (!auth) {
-        setUserState({ data: null, isLoading: false });
-        return;
-    }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUserState({ data: user, isLoading: false });
-    });
-    return () => unsubscribe();
-  }, [auth]);
-
-  return userState;
-}
+import type { User } from '@/lib/types';
 
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { data: user, isLoading } = useUser();
+  const [user] = useLocalStorage<User | null>('user', null);
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    // Basic check if user is logged in
+    if (!user) {
       router.replace('/auth');
+    } else {
+      setIsLoading(false);
     }
-  }, [isLoading, user, router]);
+  }, [user, router]);
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
         <div className="flex h-screen w-screen items-center justify-center">
             <Loader className="h-8 w-8 animate-spin text-primary" />

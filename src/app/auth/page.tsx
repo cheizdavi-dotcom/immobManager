@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,11 +15,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { FirebaseContext } from '../../firebase/provider';
-
+import type { User } from '@/lib/types';
 
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido.'),
@@ -32,19 +31,11 @@ const registerSchema = z.object({
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
 });
 
-// HOOK MOVED HERE TO FIX IMPORT ISSUES
-function useAuth() {
-  const context = useContext(FirebaseContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within a FirebaseProvider');
-  }
-  return context.auth;
-}
-
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const auth = useAuth();
+  const [users, setUsers] = useLocalStorage<User[]>('users', []);
+  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('user', null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -58,56 +49,52 @@ export default function AuthPage() {
     defaultValues: { name: '', email: '', password: '' },
   });
 
-  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
-    if (!auth) return;
-    try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
+  useEffect(() => {
+    if(currentUser) {
         router.push('/dashboard');
-    } catch (error: any) {
-        console.error("Firebase Auth Error", error);
-        const errorCode = error.code;
-        let description = 'Ocorreu um erro desconhecido.';
-        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-            description = 'E-mail ou senha inválidos.';
-        } else if (errorCode === 'auth/too-many-requests') {
-            description = 'Muitas tentativas de login. Tente novamente mais tarde.';
-        }
-        toast({
-            variant: 'destructive',
-            title: 'Falha no login',
-            description,
-        });
+    }
+  }, [currentUser, router]);
+
+  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
+    const user = users.find(u => u.email === values.email && u.password === values.password);
+    if (user) {
+      setCurrentUser(user);
+      toast({ title: 'Login bem-sucedido!', description: 'Redirecionando...' });
+      router.push('/dashboard');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Falha no login',
+        description: 'E-mail ou senha inválidos.',
+      });
     }
   };
 
-  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
-     if (!auth) return;
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      await updateProfile(userCredential.user, { displayName: values.name });
-
+  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
+    if (users.some(u => u.email === values.email)) {
       toast({
-        title: 'Cadastro realizado com sucesso!',
-        description: 'Você já pode fazer o login.',
+        variant: 'destructive',
+        title: 'Falha no cadastro',
+        description: 'Este e-mail já está em uso.',
       });
-      loginForm.setValue('email', values.email);
-      loginForm.setValue('password', '');
-      setIsLogin(true);
-      registerForm.reset();
-    } catch (error: any) {
-        console.error("Firebase Auth Error", error);
-        const errorCode = error.code;
-        let description = 'Ocorreu um erro desconhecido.';
-        if (errorCode === 'auth/email-already-in-use') {
-            description = 'Este e-mail já está em uso.';
-        }
-        toast({
-            variant: 'destructive',
-            title: 'Falha no cadastro',
-            description: description,
-        });
+      return;
     }
+    const newUser: User = {
+      id: new Date().toISOString(),
+      name: values.name,
+      email: values.email,
+      password: values.password, // Storing password directly, NOT for production
+      photoUrl: ''
+    };
+    setUsers([...users, newUser]);
+    toast({
+      title: 'Cadastro realizado com sucesso!',
+      description: 'Você já pode fazer o login.',
+    });
+    loginForm.setValue('email', values.email);
+    loginForm.setValue('password', '');
+    setIsLogin(true);
+    registerForm.reset();
   };
 
   return (

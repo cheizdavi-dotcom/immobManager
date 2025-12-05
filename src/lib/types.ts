@@ -66,3 +66,12 @@ export type Sale = {
   clientName: string;
   empreendimento: string;
 };
+
+// Added for local authentication
+export type User = {
+    id: string;
+    name: string;
+    email: string;
+    password?: string; // Not for production use
+    photoUrl?: string;
+}
