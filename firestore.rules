@@ -16,10 +16,10 @@ service cloud.firestore {
       allow read, update, delete: if isSignedIn() && isOwner(userId);
       allow create: if isSignedIn();
 
-      // Any authenticated user can read data from subcollections of any user.
-      // However, write operations are restricted to the owner of the user document.
+      // Write operations are restricted to the owner of the user document.
+      // Read operations are also restricted to the owner to ensure data privacy.
       match /{subcollection}/{docId} {
-        allow read, list: if isSignedIn();
+        allow read, list: if isSignedIn() && isOwner(userId);
         allow write: if isSignedIn() && isOwner(userId);
       }
     }
