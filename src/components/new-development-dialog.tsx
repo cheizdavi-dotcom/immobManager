@@ -15,11 +15,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { type Development } from '@/lib/types';
-import { useEffect, type ReactNode } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, type ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
+
 
 const developmentSchema = z.object({
-  id: z.string().optional(),
   name: z.string().min(1, 'O nome é obrigatório.'),
   construtora: z.string().min(1, 'A construtora é obrigatória.'),
   localizacao: z.string().min(1, 'A localização é obrigatória.'),
@@ -28,7 +28,7 @@ const developmentSchema = z.object({
 type DevelopmentFormValues = z.infer<typeof developmentSchema>;
 
 type NewDevelopmentDialogProps = {
-  onDevelopmentSubmit: (development: Development) => void;
+  onDevelopmentSubmit: (development: DevelopmentFormValues, id?:string) => Promise<Development | null>;
   development?: Development | null;
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
@@ -42,13 +42,13 @@ export function NewDevelopmentDialog({
   onOpenChange,
   children,
 }: NewDevelopmentDialogProps) {
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!development;
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     reset,
   } = useForm<DevelopmentFormValues>({
     resolver: zodResolver(developmentSchema),
@@ -65,7 +65,6 @@ export function NewDevelopmentDialog({
         reset(development);
       } else {
         reset({
-          id: undefined,
           name: '',
           construtora: '',
           localizacao: '',
@@ -74,18 +73,13 @@ export function NewDevelopmentDialog({
     }
   }, [development, isEditing, reset, isOpen]);
 
-  const onSubmit = (data: DevelopmentFormValues) => {
-    const finalData: Development = {
-      ...data,
-      id: development?.id || new Date().toISOString(),
-      userId: 'local-user', // Placeholder for local development
-    };
-    onDevelopmentSubmit(finalData);
-    toast({
-      title: isEditing ? 'Empreendimento Atualizado!' : 'Empreendimento Cadastrado!',
-      description: `${data.name} foi salvo com sucesso.`,
-    });
-    if (onOpenChange) onOpenChange(false);
+  const onSubmit = async (data: DevelopmentFormValues) => {
+    setIsSubmitting(true);
+    const result = await onDevelopmentSubmit(data, development?.id);
+    setIsSubmitting(false);
+    if(result && onOpenChange) {
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -101,22 +95,25 @@ export function NewDevelopmentDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Empreendimento</Label>
-            <Input id="name" {...register('name')} />
+            <Input id="name" {...register('name')} disabled={isSubmitting} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="construtora">Construtora</Label>
-            <Input id="construtora" placeholder="Ex: Tenda, MRV" {...register('construtora')} />
+            <Input id="construtora" placeholder="Ex: Tenda, MRV" {...register('construtora')} disabled={isSubmitting} />
             {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
           </div>
            <div className="space-y-2">
             <Label htmlFor="localizacao">Localização</Label>
-            <Input id="localizacao" placeholder="Ex: Bairro, Cidade" {...register('localizacao')} />
+            <Input id="localizacao" placeholder="Ex: Bairro, Cidade" {...register('localizacao')} disabled={isSubmitting} />
             {errors.localizacao && <p className="text-sm text-destructive">{errors.localizacao.message}</p>}
           </div>
           
           <DialogFooter>
-            <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Salvar Empreendimento'}</Button>
+            <Button type="submit" disabled={isSubmitting || !isDirty}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? (isEditing ? 'Salvando...' : 'Cadastrando...') : (isEditing ? 'Salvar Alterações' : 'Salvar Empreendimento')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

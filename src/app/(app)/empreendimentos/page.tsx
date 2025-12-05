@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Table,
@@ -11,35 +11,82 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit, Building } from 'lucide-react';
+import { Trash2, Edit, Building, Loader2 } from 'lucide-react';
 import { NewDevelopmentDialog } from '@/components/new-development-dialog';
-import type { Development } from '@/lib/types';
+import type { Development, User } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { getDevelopments, addOrUpdateDevelopment as addOrUpdateDevelopmentAction, deleteDevelopment as deleteDevelopmentAction } from './actions';
 
 export default function EmpreendimentosPage() {
-  const [developments, setDevelopments] = useLocalStorage<Development[]>('developments', []);
+  const [user] = useLocalStorage<User | null>('user', null);
+  const [developments, setDevelopments] = useState<Development[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const addOrUpdateDevelopment = (development: Development) => {
-    setDevelopments((prev) => {
-      const existing = prev.find((d) => d.id === development.id);
-      if (existing) {
-        return prev.map((d) => (d.id === development.id ? development : d));
-      }
-      return [...prev, development];
-    });
+  const fetchDevelopments = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const data = await getDevelopments(user.id);
+      setDevelopments(data);
+    } catch (err: any) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro ao buscar empreendimentos.', description: err.message });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, toast]);
+  
+  useEffect(() => {
+    fetchDevelopments();
+  }, [fetchDevelopments]);
+
+
+  const handleAddOrUpdateDevelopment = async (devData: Omit<Development, 'id' | 'userId'>, id?: string) => {
+    if (!user?.id) {
+        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
+        return null;
+    }
+    
+    try {
+        const savedDevelopment = await addOrUpdateDevelopmentAction(devData, user.id, id);
+        
+        await fetchDevelopments();
+
+        toast({
+            title: id ? 'Empreendimento Atualizado!' : 'Empreendimento Cadastrado!',
+            description: `${savedDevelopment.name} foi salvo com sucesso.`,
+        });
+        return savedDevelopment;
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Erro ao salvar empreendimento.', description: err.message });
+        return null;
+    }
   };
 
-  const deleteDevelopment = (developmentId: string) => {
+  const deleteDevelopment = async (developmentId: string) => {
+    if (!user?.id) {
+      toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Usuário não autenticado.' });
+      return;
+    }
     // TODO: Add logic to check if development is associated with a sale before deleting
-    setDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
-    toast({
-      title: 'Empreendimento Excluído!',
-      description: 'O empreendimento foi removido da sua lista.',
-    });
+     try {
+        await deleteDevelopmentAction(developmentId, user.id);
+        setDevelopments((prev) => prev.filter((d) => d.id !== developmentId));
+        toast({
+            title: 'Empreendimento Excluído!',
+            description: 'O empreendimento foi removido da sua lista.',
+        });
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Erro ao excluir empreendimento.', description: err.message });
+    }
   };
 
   const handleEdit = (development: Development) => {
@@ -58,6 +105,15 @@ export default function EmpreendimentosPage() {
   }
 
   const renderContent = () => {
+    if (isLoading) {
+      return (
+           <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-muted-foreground">Carregando empreendimentos...</p>
+          </div>
+      )
+    }
+
     if (developments.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg py-20">
@@ -126,12 +182,12 @@ export default function EmpreendimentosPage() {
             <h1 className="text-2xl font-bold tracking-tight">Gestão de Empreendimentos</h1>
             <p className="text-muted-foreground">Cadastre e gerencie os imóveis disponíveis.</p>
         </div>
-        <Button onClick={handleOpenNewDialog}>Novo Empreendimento</Button>
+        <Button onClick={handleOpenNewDialog} disabled={!user?.id}>Novo Empreendimento</Button>
       </div>
       
       <NewDevelopmentDialog
         development={editingDevelopment}
-        onDevelopmentSubmit={addOrUpdateDevelopment}
+        onDevelopmentSubmit={handleAddOrUpdateDevelopment}
         isOpen={isDialogOpen}
         onOpenChange={handleDialogClose}
       />
