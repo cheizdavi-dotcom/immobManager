@@ -1,0 +1,124 @@
+/**
+ * # Core Philosophy
+ * This ruleset establishes a security model where core CRM data (Clients, Properties, Builders) is readable by any authenticated user, but all write operations are currently disabled for security, pending the addition of ownership fields. User-specific data, such as Sales Agents and their associated Sales, is strictly controlled using a path-based ownership model.
+ *
+ * # Data Structure
+ * - `/clients/{clientId}`: Stores client information.
+ * - `/properties/{propertyId}`: Stores property details.
+ * - `/builders/{builderId}`: Stores builder information.
+ * - `/salesAgents/{salesAgentId}`: Stores individual sales agent profiles. This document ID must match the user's UID.
+ * - `/salesAgents/{salesAgentId}/sales/{saleId}`: A subcollection storing sales records, where access is inherited from the parent sales agent.
+ *
+ * # Key Security Decisions
+ * - **Strict Ownership for Sales**: A sales agent can only view, create, and manage their own sales records. This is enforced by nesting the `sales` collection under `/salesAgents/{salesAgentId}`.
+ * - **Read-Only Reference Data**: Top-level collections like `clients`, `properties`, and `builders` are treated as read-only reference data for all signed-in users. Write access is disabled by default because the schemas lack an `ownerId` field required for secure write validation.
+ * - **No User Listing**: Listing all documents in the `/salesAgents` collection is disallowed to protect user privacy. Users can only fetch their own agent profile directly by its ID.
+ * - **Relational Integrity**: Rules enforce that when a sale is created, its internal `salesAgentId` field must match the user creating it, preventing data mismatches.
+ *
+ * # Denormalization for Authorization
+ * The primary example of this is the `/salesAgents/{salesAgentId}/sales/{saleId}` path. By nesting sales directly under the agent who owns them, the rules can enforce ownership using the `salesAgentId` from the path. This avoids costly and slow `get()` calls to other documents and makes securing list operations simple and performant.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------------------
+    // Helper Functions
+    // ----------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the primary function for validating ownership.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * For update/delete operations, checks ownership AND ensures the document exists.
+     * This prevents unauthorized modifications on non-existent paths.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // ----------------------------------------------------------------------
+    // Collection Rules
+    // ----------------------------------------------------------------------
+
+    /**
+     * @description Controls access to client records.
+     * @path /clients/{clientId}
+     * @allow A signed-in user can (get) or (list) any client document.
+     * @deny An unauthenticated user cannot read clients. Any user attempting to (create), (update), or (delete) a client will be denied.
+     * @principle Treats this collection as read-only reference data for all authenticated users. Writes are disabled for security until an ownership model is defined.
+     */
+    match /clients/{clientId} {
+      allow get, list: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Client' entity is missing an 'ownerId' or 'authorId' field.
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Controls access to property records.
+     * @path /properties/{propertyId}
+     * @allow A signed-in user can (get) or (list) any property document.
+     * @deny An unauthenticated user cannot read properties. Any user attempting to (create), (update), or (delete) a property will be denied.
+     * @principle Treats this collection as read-only reference data for all authenticated users. Writes are disabled for security until an ownership model is defined.
+     */
+    match /properties/{propertyId} {
+      allow get, list: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Property' entity is missing an 'ownerId' or 'authorId' field.
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Controls access to builder records.
+     * @path /builders/{builderId}
+     * @allow A signed-in user can (get) or (list) any builder document.
+     * @deny An unauthenticated user cannot read builders. Any user attempting to (create), (update), or (delete) a builder will be denied.
+     * @principle Treats this collection as read-only reference data for all authenticated users. Writes are disabled for security until an ownership model is defined.
+     */
+    match /builders/{builderId} {
+      allow get, list: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Builder' entity is missing an 'ownerId' or 'authorId' field.
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Controls access to sales agent profiles. A user's auth UID must match the document ID.
+     * @path /salesAgents/{salesAgentId}
+     * @allow A user with UID `abc` can (create), (get), (update), or (delete) the document at `/salesAgents/abc`.
+     * @deny A user with UID `xyz` cannot access `/salesAgents/abc`. Listing all agents is also denied to everyone.
+     * @principle Enforces self-creation and strict ownership of a user's own root document.
+     */
+    match /salesAgents/{salesAgentId} {
+      allow get: if isOwner(salesAgentId);
+      allow create: if isOwner(salesAgentId) && request.resource.data.id == salesAgentId;
+      allow update: if isExistingOwner(salesAgentId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(salesAgentId);
+      allow list: if false;
+    }
+
+    /**
+     * @description Controls access to sales records, which are owned by the parent sales agent.
+     * @path /salesAgents/{salesAgentId}/sales/{saleId}
+     * @allow A user with UID `abc` can perform any action (get, list, create, update, delete) on a sale within `/salesAgents/abc/sales/`.
+     * @deny A user with UID `xyz` cannot access any sales under `/salesAgents/abc/sales/`.
+     * @principle Restricts access to a user's own data tree using path-based ownership.
+     */
+    match /salesAgents/{salesAgentId}/sales/{saleId} {
+      allow get, list: if isOwner(salesAgentId);
+      allow create: if isOwner(salesAgentId) && request.resource.data.salesAgentId == salesAgentId;
+      allow update: if isExistingOwner(salesAgentId) && request.resource.data.salesAgentId == resource.data.salesAgentId;
+      allow delete: if isExistingOwner(salesAgentId);
+    }
+  }
+}
