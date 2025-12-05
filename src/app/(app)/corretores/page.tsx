@@ -5,11 +5,11 @@ import { Users, Phone, List, Trash2, DollarSign, TrendingUp } from 'lucide-react
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { NewCorretorDialog } from '@/components/new-corretor-dialog';
 import type { Corretor, Sale, User } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, safeParseFloat } from '@/lib/utils';
 import { sales as initialSalesData } from '@/lib/data';
 import { SalesHistoryDialog } from '@/components/sales-history-dialog';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -86,12 +86,14 @@ export default function CorretoresPage() {
     setIsHistoryDialogOpen(true);
   }
 
-  const getCorretorKPIs = (corretorId: string) => {
-    const corretorSales = sales.filter(s => s.corretorId === corretorId && s.status === 'Venda Concluída / Paga');
-    const totalVendido = corretorSales.reduce((acc, sale) => acc + sale.saleValue, 0);
-    const vendasRealizadas = corretorSales.length;
-    return { totalVendido, vendasRealizadas };
-  }
+  const corretoresComKPIs = useMemo(() => {
+    return corretores.map(corretor => {
+      const corretorSales = sales.filter(s => s.corretorId === corretor.id && s.status === 'Venda Concluída / Paga');
+      const totalVendido = corretorSales.reduce((acc, sale) => acc + safeParseFloat(sale.saleValue), 0);
+      const vendasRealizadas = corretorSales.length;
+      return { ...corretor, totalVendido, vendasRealizadas };
+    });
+  }, [corretores, sales]);
 
   const renderContent = () => {
      if (!user?.id) {
@@ -122,8 +124,7 @@ export default function CorretoresPage() {
 
     return (
        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {corretores.map((corretor) => {
-          const { totalVendido, vendasRealizadas } = getCorretorKPIs(corretor.id);
+        {corretoresComKPIs.map((corretor) => {
           const whatsappLink = `https://wa.me/${(corretor.phone || '').replace(/\D/g, '')}`;
 
           return (
@@ -149,14 +150,14 @@ export default function CorretoresPage() {
                         <DollarSign className="h-4 w-4" />
                         <span>Total Vendido</span>
                     </div>
-                    <span className="font-bold">{formatCurrency(totalVendido)}</span>
+                    <span className="font-bold">{formatCurrency(corretor.totalVendido)}</span>
                  </div>
                  <div className="flex justify-between items-center text-sm p-3 bg-muted/50 rounded-md">
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <TrendingUp className="h-4 w-4" />
                         <span>Vendas Realizadas</span>
                     </div>
-                    <span className="font-bold">{vendasRealizadas}</span>
+                    <span className="font-bold">{corretor.vendasRealizadas}</span>
                  </div>
               </CardContent>
               <div className="flex border-t p-2">

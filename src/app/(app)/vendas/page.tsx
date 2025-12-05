@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { SalesTable } from '@/components/sales-table';
 import { NewSaleDialog } from '@/components/new-sale-dialog';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getYear, getMonth } from 'date-fns';
+import { getYear, getMonth, parseISO } from 'date-fns';
 import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
 import {
   sales as initialSalesData,
@@ -38,7 +38,7 @@ export default function VendasPage() {
   const [yearFilter, setYearFilter] = useState('all');
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
 
-  const handleAddOrUpdateSale = async (saleData: Omit<Sale, 'id' | 'userId'>, id?: string) => {
+  const handleAddOrUpdateSale = async (saleData: Omit<Sale, 'id' | 'userId' | 'commissionStatus'>, id?: string) => {
     try {
         let savedSale: Sale;
         if (id) {
@@ -71,12 +71,14 @@ export default function VendasPage() {
   const handleClientSubmit = async (clientData: Omit<Client, 'id' | 'userId'>) => {
     const newClient = { ...clientData, id: crypto.randomUUID(), userId: user!.id };
     setClients(prev => [...prev, newClient]);
+    toast({ title: 'Cliente Criado!', description: `${newClient.name} foi adicionado.` });
     return newClient;
   }
 
   const handleDevelopmentSubmit = async (devData: Omit<Development, 'id' | 'userId'>) => {
     const newDev = { ...devData, id: crypto.randomUUID(), userId: user!.id };
     setDevelopments(prev => [...prev, newDev]);
+    toast({ title: 'Empreendimento Criado!', description: `${newDev.name} foi adicionado.` });
     return newDev;
   }
 
@@ -88,7 +90,7 @@ export default function VendasPage() {
 
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
-        const saleDate = new Date(sale.saleDate);
+        const saleDate = parseISO(sale.saleDate);
         const saleMonth = getMonth(saleDate);
         const saleYear = getYear(saleDate);
 
@@ -110,7 +112,7 @@ export default function VendasPage() {
 
   const uniqueYears = useMemo(() => {
     return Array.from(
-        new Set(sales.map((sale) => getYear(new Date(sale.saleDate))))
+        new Set(sales.map((sale) => getYear(parseISO(sale.saleDate))))
     ).sort((a,b) => b - a)
   }, [sales]);
 

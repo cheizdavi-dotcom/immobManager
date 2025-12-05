@@ -31,7 +31,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { cn, formatCurrency, parseCurrency, safeParseFloat } from '@/lib/utils';
 import { ALL_STATUSES, type Sale, type Corretor, type Client, type Development } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { CreatableSelect } from './creatable-select';
@@ -41,7 +41,6 @@ const saleSchema = z.object({
   corretorId: z.string().min(1, 'Selecione um corretor.'),
   clientId: z.string().min(1, 'O nome do cliente é obrigatório.'),
   developmentId: z.string().min(1, 'O nome do empreendimento é obrigatório.'),
-  construtora: z.string().min(1, 'O nome da construtora é obrigatório.'),
   saleValue: z.string().refine((val) => safeParseFloat(val) > 0, { message: 'O valor da venda deve ser maior que zero.' }),
   atoValue: z.string(),
   commissionPercentage: z.string().optional().nullable(),
@@ -55,11 +54,9 @@ const saleSchema = z.object({
 });
 
 type SaleFormValues = z.infer<typeof saleSchema>;
-type SaleSubmitData = Omit<Sale, 'id' | 'userId' | 'commissionStatus'>;
-
 
 type NewSaleDialogProps = {
-    onSaleSubmit: (sale: SaleSubmitData, id?:string) => Promise<Sale | null>;
+    onSaleSubmit: (sale: Omit<Sale, 'id' | 'userId' | 'commissionStatus'>, id?:string) => Promise<Sale | null>;
     sale?: Sale | null;
     isOpen?: boolean;
     onOpenChange?: (isOpen: boolean) => void;
@@ -74,19 +71,19 @@ const CurrencyInput = ({ value, onChange, ...props }: { value: string, onChange:
     const [displayValue, setDisplayValue] = useState(value);
 
     useEffect(() => {
-        setDisplayValue(value);
+        setDisplayValue(formatCurrency(safeParseFloat(value)));
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const inputValue = e.target.value;
+        const numericValue = parseCurrency(inputValue);
         setDisplayValue(inputValue);
-        onChange(inputValue);
+        onChange(String(numericValue)); // Store raw numeric string internally
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
       const numericValue = parseCurrency(e.target.value);
       setDisplayValue(formatCurrency(numericValue));
-      onChange(formatCurrency(numericValue));
     }
 
     return (
@@ -125,13 +122,12 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
       status: 'Proposta / Cadastro',
       observations: '',
       combinado: '',
-      saleValue: 'R$ 0,00',
-      atoValue: 'R$ 0,00',
-      commission: 'R$ 0,00',
+      saleValue: '0',
+      atoValue: '0',
+      commission: '0',
       commissionPercentage: '5',
       clientId: '',
       developmentId: '',
-      construtora: '',
     },
   });
 
@@ -140,11 +136,11 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
         if (isEditing && sale) {
             reset({
                 ...sale,
-                saleDate: new Date(sale.saleDate),
-                combinadoDate: sale.combinadoDate ? new Date(sale.combinadoDate) : null,
-                saleValue: formatCurrency(sale.saleValue),
-                atoValue: formatCurrency(sale.atoValue),
-                commission: formatCurrency(sale.commission),
+                saleDate: parseISO(sale.saleDate),
+                combinadoDate: sale.combinadoDate ? parseISO(sale.combinadoDate) : null,
+                saleValue: String(sale.saleValue),
+                atoValue: String(sale.atoValue),
+                commission: String(sale.commission),
                 commissionPercentage: sale.commissionPercentage?.toString() || '0',
             });
         } else {
@@ -152,12 +148,11 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
                 corretorId: '',
                 clientId: '',
                 developmentId: '',
-                construtora: '',
                 status: 'Proposta / Cadastro',
-                saleValue: 'R$ 0,00',
-                atoValue: 'R$ 0,00',
+                saleValue: '0',
+                atoValue: '0',
                 commissionPercentage: '5',
-                commission: 'R$ 0,00',
+                commission: '0',
                 saleDate: new Date(),
                 observations: '',
                 combinado: '',
@@ -174,11 +169,11 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
   useEffect(() => {
     const isCommissionManuallyEdited = dirtyFields.commission;
     if (!isCommissionManuallyEdited) {
-      const saleVal = parseCurrency(saleValue);
-      const commissionPerc = commissionPercentage ? parseFloat(commissionPercentage.replace(/[^0-9.]/g, '')) : 0;
+      const saleVal = safeParseFloat(saleValue);
+      const commissionPerc = commissionPercentage ? safeParseFloat(commissionPercentage) : 0;
       if (saleVal > 0 && commissionPerc > 0) {
           const commissionValue = saleVal * (commissionPerc / 100);
-          setValue('commission', formatCurrency(commissionValue), { shouldDirty: true });
+          setValue('commission', String(commissionValue), { shouldDirty: true });
       }
     }
   }, [saleValue, commissionPercentage, setValue, dirtyFields.commission]);
@@ -194,12 +189,14 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
 
   const onSubmit = async (data: SaleFormValues) => {
     setIsSubmitting(true);
-    const submissionData: SaleSubmitData = {
+    const submissionData = {
         ...data,
-        saleValue: parseCurrency(data.saleValue),
-        atoValue: parseCurrency(data.atoValue),
-        commission: parseCurrency(data.commission),
-        commissionPercentage: data.commissionPercentage ? parseFloat(data.commissionPercentage) : null,
+        saleDate: data.saleDate.toISOString(),
+        combinadoDate: data.combinadoDate ? data.combinadoDate.toISOString() : null,
+        saleValue: safeParseFloat(data.saleValue),
+        atoValue: safeParseFloat(data.atoValue),
+        commission: safeParseFloat(data.commission),
+        commissionPercentage: data.commissionPercentage ? safeParseFloat(data.commissionPercentage) : null,
     };
     const result = await onSaleSubmit(submissionData, sale?.id);
     setIsSubmitting(false);
@@ -345,7 +342,6 @@ export function NewSaleDialog({ onSaleSubmit, sale = null, isOpen: controlledIsO
             <div className="space-y-2">
                 <Label htmlFor="construtora">Construtora</Label>
                 <Input id="construtora" {...register('construtora')} placeholder="Ex: Tenda, MRV" readOnly disabled={isSubmitting}/>
-                {errors.construtora && <p className="text-sm text-destructive">{errors.construtora.message}</p>}
             </div>
           </div>
 

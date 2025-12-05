@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cva } from 'class-variance-authority';
 import { Edit, Trash2, FileText, ArrowUpDown, ChevronDown, MessageSquare, Handshake } from 'lucide-react';
 import React, { useState } from 'react';
@@ -103,8 +103,8 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
         }
         
         if (sortKey === 'saleDate') {
-            const aDate = new Date(aValue as string | number | Date).getTime();
-            const bDate = new Date(bValue as string | number | Date).getTime();
+            const aDate = parseISO(aValue as string).getTime();
+            const bDate = parseISO(bValue as string).getTime();
             if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
             if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
             return 0;
@@ -200,7 +200,7 @@ export function SalesTable({ sales, onSaleSubmit, onDeleteSale, corretores, clie
                             {(sale.observations || sale.combinado) && (
                                 <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRowId === sale.id && "rotate-180")} />
                             )}
-                            {format(new Date(sale.saleDate), 'dd/MM/yyyy')}
+                            {format(parseISO(sale.saleDate), 'dd/MM/yyyy')}
                         </div>
                         </TableCell>
                         <TableCell>{corretoresMap[sale.corretorId]?.name || 'N/A'}</TableCell>

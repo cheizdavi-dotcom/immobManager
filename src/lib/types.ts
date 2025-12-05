@@ -48,11 +48,10 @@ export type Development = {
 export type Sale = {
   id: string;
   userId: string;
-  saleDate: any; // Stored as string, but Date object in form
+  saleDate: string; // Stored as ISO string
   corretorId: string;
   clientId: string;
   developmentId: string;
-  construtora: string;
   saleValue: number;
   atoValue: number;
   commissionPercentage: number | null;
@@ -61,7 +60,7 @@ export type Sale = {
   commissionStatus: CommissionStatus;
   observations?: string;
   combinado?: string;
-  combinadoDate?: any | null; // Stored as string, but Date object in form
+  combinadoDate?: string | null; // Stored as ISO string
 };
 
 // Added for local authentication

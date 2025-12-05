@@ -5,13 +5,13 @@ import { Banknote, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-rea
 import useLocalStorage from '@/hooks/useLocalStorage';
 import type { Sale, Corretor, CommissionStatus, Client, Development, User } from '@/lib/types';
 import { sales as initialSalesData, corretores as initialCorretoresData, clients, developments } from '@/lib/data';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency, cn, safeParseFloat } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cva } from 'class-variance-authority';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 const commissionStatusBadgeVariants = cva('capitalize font-semibold cursor-pointer text-xs border', {
   variants: {
@@ -46,15 +46,15 @@ export default function FinanceiroPage() {
     const financialMetrics = useMemo(() => {
         const activeSales = sales.filter(s => s.status !== 'Venda Cancelada / Caiu');
         
-        const vgvTotalGeral = activeSales.reduce((acc, s) => acc + (s.saleValue || 0), 0);
+        const vgvTotalGeral = activeSales.reduce((acc, s) => acc + safeParseFloat(s.saleValue), 0);
         
         const comissoesPagas = activeSales
             .filter(s => s.commissionStatus === 'Pago')
-            .reduce((acc, s) => acc + (s.commission || 0), 0);
+            .reduce((acc, s) => acc + safeParseFloat(s.commission), 0);
 
         const comissoesAPagar = activeSales
             .filter(s => s.commissionStatus === 'Pendente')
-            .reduce((acc, s) => acc + (s.commission || 0), 0);
+            .reduce((acc, s) => acc + safeParseFloat(s.commission), 0);
         
         const lucroBrutoPotencial = vgvTotalGeral - (comissoesPagas + comissoesAPagar);
         
@@ -65,8 +65,8 @@ export default function FinanceiroPage() {
 
     const commissionsToDisplay = useMemo(() => {
         return sales
-            .filter(s => (s.commission || 0) > 0 && s.status !== 'Venda Cancelada / Caiu')
-            .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
+            .filter(s => safeParseFloat(s.commission) > 0 && s.status !== 'Venda Cancelada / Caiu')
+            .sort((a, b) => parseISO(b.saleDate).getTime() - parseISO(a.saleDate).getTime());
     }, [sales]);
 
     const corretoresMap = useMemo(() => corretores.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<string, string>), [corretores]);
@@ -138,7 +138,7 @@ export default function FinanceiroPage() {
                                     key={sale.id}
                                     className={cn('border-x-0', sale.status === 'Venda Cancelada / Caiu' && 'bg-muted/50 text-muted-foreground line-through')}
                                 >
-                                    <TableCell>{format(new Date(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
+                                    <TableCell>{format(parseISO(sale.saleDate), 'dd/MM/yyyy')}</TableCell>
                                     <TableCell>{corretoresMap[sale.corretorId] || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="font-medium">{developmentsMap[sale.developmentId] || 'N/A'}</div>

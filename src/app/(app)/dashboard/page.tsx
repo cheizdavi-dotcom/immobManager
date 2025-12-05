@@ -4,13 +4,13 @@ import type { Sale, Corretor, Client, Development, User } from '@/lib/types';
 import { clients as initialClients, sales as initialSalesData, developments as initialDevelopments, corretores as initialCorretores } from '@/lib/data';
 import { useMemo, useEffect } from 'react';
 import { KpiCard } from '@/components/kpi-card';
-import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle } from 'lucide-react';
+import { DollarSign, TrendingUp, CheckCircle, Clock, Percent, Package, AlertTriangle, Banknote } from 'lucide-react';
 import { formatCurrency, safeParseFloat } from '@/lib/utils';
 import { BrokerRankingChart } from '@/components/broker-ranking-chart';
 import { BuilderMixChart } from '@/components/builder-mix-chart';
 import { AttentionList } from '@/components/attention-list';
 import { AgendaWidget } from '@/components/agenda-widget';
-import { subDays } from 'date-fns';
+import { subDays, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
@@ -39,6 +39,7 @@ export default function DashboardPage() {
         comissoesPagas,
         comissoesPendentes,
         conversionRate,
+        entradasAto
     } = useMemo(() => {
         if (!sales || sales.length === 0) {
           return {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
             comissoesPagas: 0,
             comissoesPendentes: 0,
             conversionRate: 0,
+            entradasAto: 0,
           };
         }
         
@@ -66,8 +68,10 @@ export default function DashboardPage() {
         
         const totalClosedDeals = sales.filter(s => s.status === 'Venda Concluída / Paga' || s.status === 'Venda Cancelada / Caiu').length;
         const conversionRate = totalClosedDeals > 0 ? (completedSales.length / totalClosedDeals) * 100 : 0;
+        
+        const entradasAto = completedSales.reduce((acc, s) => acc + safeParseFloat(s.atoValue), 0);
 
-        return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate };
+        return { faturamentoVendasPagas, vgvPipelineAtivo, comissoesPagas, comissoesPendentes, conversionRate, entradasAto };
     }, [sales]);
 
     const brokerRankingData = useMemo(() => {
@@ -111,7 +115,7 @@ export default function DashboardPage() {
         const sevenDaysAgo = subDays(new Date(), 7);
         return sales.filter(sale => 
             (sale.status === 'Análise de Crédito / SPC' || sale.status === 'Aguardando Assinatura' || sale.status === 'Aguardando Pagamento Ato') &&
-            new Date(sale.saleDate) < sevenDaysAgo
+            parseISO(sale.saleDate as unknown as string) < sevenDaysAgo
         );
     }, [sales]);
 
@@ -157,26 +161,23 @@ export default function DashboardPage() {
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-             <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
+             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                 <KpiCard
                     title="Faturamento (Vendas Pagas)"
                     value={formatCurrency(faturamentoVendasPagas)}
                     icon={<DollarSign />}
+                    className="lg:col-span-2"
                 />
                  <KpiCard
                     title="VGV Pipeline (Ativo)"
                     value={formatCurrency(vgvPipelineAtivo)}
                     icon={<Package />}
+                     className="lg:col-span-2"
                 />
-                <KpiCard
-                    title="Comissões a Pagar"
-                    value={formatCurrency(comissoesPendentes)}
-                    icon={<Clock className="text-yellow-500" />}
-                />
-                <KpiCard
-                    title="Comissões Pagas"
-                    value={formatCurrency(comissoesPagas)}
-                    icon={<CheckCircle className="text-green-500" />}
+                 <KpiCard
+                    title="Entradas / Atos (Pago)"
+                    value={formatCurrency(entradasAto)}
+                    icon={<Banknote />}
                 />
                 <KpiCard
                     title="Taxa de Conversão"
@@ -191,6 +192,18 @@ export default function DashboardPage() {
                     <BuilderMixChart data={builderMixData} />
                 </div>
                 <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-8">
+                    <div className="grid grid-cols-2 gap-4">
+                         <KpiCard
+                            title="Comissões Pagas"
+                            value={formatCurrency(comissoesPagas)}
+                            icon={<CheckCircle className="text-green-500" />}
+                        />
+                         <KpiCard
+                            title="Comissões a Pagar"
+                            value={formatCurrency(comissoesPendentes)}
+                            icon={<Clock className="text-yellow-500" />}
+                        />
+                    </div>
                      <AgendaWidget sales={sales} clientsMap={clientsMap} />
                      <AttentionList sales={attentionSales} corretoresMap={corretoresMap} clientsMap={clientsMap} developmentsMap={developmentsMap} />
                 </div>
