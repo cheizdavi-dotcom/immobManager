@@ -10,7 +10,7 @@ import { SalesHistoryDialog } from '@/components/sales-history-dialog';
 import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,14 +21,14 @@ export default function CorretoresPage() {
   const firestore = useFirestore();
 
   const corretoresQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
 
   const salesQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
 
   const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
   const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);

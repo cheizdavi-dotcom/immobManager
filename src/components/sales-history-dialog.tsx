@@ -44,15 +44,15 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
     const firestore = useFirestore();
 
     const clientsQuery = useMemo(() => {
-      if (!firestore || !user?.uid) return null;
+      if (!user?.uid || !firestore) return null;
       return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+    }, [user?.uid, firestore]);
     const { data: clientsData } = useCollection<Client>(clientsQuery);
 
     const developmentsQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
-        return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+      if (!user?.uid || !firestore) return null;
+      return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
+    }, [user?.uid, firestore]);
     const { data: developmentsData } = useCollection<Development>(developmentsQuery);
 
     const clientsMap = useMemo(() => {

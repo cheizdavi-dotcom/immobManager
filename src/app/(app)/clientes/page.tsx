@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -37,9 +37,9 @@ export default function ClientesPage() {
   const firestore = useFirestore();
 
   const clientsQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
 
   const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
   

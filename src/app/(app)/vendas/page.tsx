@@ -16,7 +16,7 @@ import { KanbanBoard } from '@/components/kanban-board';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { List, LayoutGrid } from 'lucide-react';
 import { ALL_STATUSES } from '@/lib/types';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,27 +31,27 @@ export default function VendasPage() {
   const [construtoraFilter, setConstrutoraFilter] = useState('all');
   
   const salesQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
   const { data: salesData, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
 
   const corretoresQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
   const { data: corretoresData, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
 
   const clientsQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
   const { data: clientsData, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
   
   const developmentsQuery = useMemo(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-  }, [firestore, user?.uid]);
+  }, [user?.uid, firestore]);
   const { data: developmentsData, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
   const addOrUpdateSale = (sale: Sale) => {

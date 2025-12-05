@@ -1,5 +1,5 @@
 'use client';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Sale, Corretor, Client, Development } from '@/lib/types';
 import { useMemo } from 'react';
@@ -18,27 +18,27 @@ export default function DashboardPage() {
     const firestore = useFirestore();
 
     const salesQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
+        if (!user?.uid || !firestore) return null;
         return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+    }, [user?.uid, firestore]);
     const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
 
     const corretoresQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
+        if (!user?.uid || !firestore) return null;
         return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+    }, [user?.uid, firestore]);
     const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
 
     const clientsQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
+        if (!user?.uid || !firestore) return null;
         return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+    }, [user?.uid, firestore]);
     const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
     
     const developmentsQuery = useMemo(() => {
-        if (!firestore || !user?.uid) return null;
+        if (!user?.uid || !firestore) return null;
         return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+    }, [user?.uid, firestore]);
     const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
     const isLoading = isUserLoading || isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
