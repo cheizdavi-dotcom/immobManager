@@ -5,12 +5,12 @@ import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  "projectId": "studio-1435535566-ba457",
-  "appId": "1:132909065584:web:5c539d51fda0a9347f1bb5",
-  "apiKey": "AIzaSyAsgQz1fsY7ypgh-q5mbsvnSzo_gKdecAU",
-  "authDomain": "studio-1435535566-ba457.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "132909065584"
+  apiKey: "AIzaSyAsgQz1fsY7ypgh-q5mbsvnSzo_gKdecAU",
+  authDomain: "studio-1435535566-ba457.firebaseapp.com",
+  projectId: "studio-1435535566-ba457",
+  storageBucket: "studio-1435535566-ba457.firebasestorage.app",
+  messagingSenderId: "132909065584",
+  appId: "1:132909065584:web:ed51bf91eb14b1d87f1bb5"
 };
 
 
