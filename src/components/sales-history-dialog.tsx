@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { cva } from 'class-variance-authority';
 import { useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 
@@ -43,14 +43,13 @@ export function SalesHistoryDialog({ isOpen, onOpenChange, corretor, sales }: Sa
     const { user } = useUser();
     const firestore = useFirestore();
 
-    const clientsQuery = useMemoFirebase(() => {
+    const clientsQuery = useMemo(() => {
       if (!firestore || !user?.uid) return null;
-      console.log('Tentando buscar dados para user:', user?.uid);
       return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: clientsData } = useCollection<Client>(clientsQuery);
 
-    const developmentsQuery = useMemoFirebase(() => {
+    const developmentsQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
         return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);

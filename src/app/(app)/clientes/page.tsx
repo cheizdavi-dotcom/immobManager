@@ -33,16 +33,17 @@ const statusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function ClientesPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const clientsQuery = useMemoFirebase(() => {
+  const clientsQuery = useMemo(() => {
     if (!firestore || !user?.uid) return null;
-    console.log('Tentando buscar dados para user:', user?.uid);
     return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
-  const { data: clients, isLoading } = useCollection<Client>(clientsQuery);
+  const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
+  
+  const isLoading = isUserLoading || isLoadingClients;
 
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

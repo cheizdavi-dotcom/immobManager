@@ -17,16 +17,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function CorretoresPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const corretoresQuery = useMemoFirebase(() => {
+  const corretoresQuery = useMemo(() => {
     if (!firestore || !user?.uid) return null;
-    console.log('Tentando buscar dados para user:', user?.uid);
     return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
-  const salesQuery = useMemoFirebase(() => {
+  const salesQuery = useMemo(() => {
     if (!firestore || !user?.uid) return null;
     return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
@@ -84,7 +83,7 @@ export default function CorretoresPage() {
     return { totalVendido, vendasRealizadas };
   }
 
-  const isLoading = isLoadingCorretores || isLoadingSales;
+  const isLoading = isUserLoading || isLoadingCorretores || isLoadingSales;
 
   if (isLoading) {
     return (

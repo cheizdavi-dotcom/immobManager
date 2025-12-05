@@ -21,16 +21,17 @@ import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/no
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EmpreendimentosPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const developmentsQuery = useMemoFirebase(() => {
+  const developmentsQuery = useMemo(() => {
     if (!firestore || !user?.uid) return null;
-    console.log('Tentando buscar dados para user:', user?.uid);
     return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
   }, [firestore, user?.uid]);
 
-  const { data: developments, isLoading } = useCollection<Development>(developmentsQuery);
+  const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
+
+  const isLoading = isUserLoading || isLoadingDevs;
 
   const [editingDevelopment, setEditingDevelopment] = useState<Development | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

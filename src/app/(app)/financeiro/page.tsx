@@ -38,35 +38,34 @@ const saleStatusBadgeVariants = cva('capitalize font-semibold text-xs border', {
 });
 
 export default function FinanceiroPage() {
-    const { user } = useUser();
+    const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
 
-    const salesQuery = useMemoFirebase(() => {
+    const salesQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
-        console.log('Tentando buscar dados para user:', user?.uid);
         return query(collection(firestore, 'sales'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesQuery);
 
-    const corretoresQuery = useMemoFirebase(() => {
+    const corretoresQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
         return query(collection(firestore, 'corretores'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: corretores, isLoading: isLoadingCorretores } = useCollection<Corretor>(corretoresQuery);
 
-    const clientsQuery = useMemoFirebase(() => {
+    const clientsQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
         return query(collection(firestore, 'clients'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
     
-    const developmentsQuery = useMemoFirebase(() => {
+    const developmentsQuery = useMemo(() => {
         if (!firestore || !user?.uid) return null;
         return query(collection(firestore, 'developments'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
     const { data: developments, isLoading: isLoadingDevs } = useCollection<Development>(developmentsQuery);
 
-    const isLoading = isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
+    const isLoading = isUserLoading || isLoadingSales || isLoadingCorretores || isLoadingClients || isLoadingDevs;
     const { toast } = useToast();
 
     const financialMetrics = useMemo(() => {
