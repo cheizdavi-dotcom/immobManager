@@ -14,27 +14,59 @@
           "type": "string",
           "description": "Full name of the client."
         },
-        "createdAt": {
-          "type": "string",
-          "description": "The date and time when the client was created.",
-          "format": "date-time"
+        "phone": {
+            "type": "string",
+            "description": "Client's phone number."
         },
-        "updatedAt": {
-          "type": "string",
-          "description": "The date and time when the client was last updated.",
-          "format": "date-time"
+        "cpf": {
+            "type": "string",
+            "description": "Client's CPF."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["Frio", "Morno", "Quente"],
+            "description": "Client's temperature status."
         }
       },
       "required": [
         "id",
         "name",
-        "createdAt",
-        "updatedAt"
+        "phone",
+        "status"
       ]
     },
-    "Property": {
+    "Corretor": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Property",
+      "title": "Corretor",
+      "type": "object",
+      "description": "Represents a real estate broker/agent.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the agent."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the agent."
+        },
+        "phone": {
+            "type": "string",
+            "description": "Agent's phone number."
+        },
+        "photoUrl": {
+            "type": "string",
+            "description": "URL of the agent's photo."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "phone"
+      ]
+    },
+    "Development": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Development",
       "type": "object",
       "description": "Represents a property or real estate project.",
       "properties": {
@@ -46,59 +78,20 @@
           "type": "string",
           "description": "Name of the property (e.g., Solar dos Pássaros)."
         },
-        "builderId": {
-          "type": "string",
-          "description": "Reference to Builder. (Relationship: Builder 1:N Property)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The date and time when the property was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The date and time when the property was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "builderId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Builder": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Builder",
-      "type": "object",
-      "description": "Represents a real estate builder or constructor.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the builder."
-        },
-        "name": {
+        "construtora": {
           "type": "string",
           "description": "Name of the builder (e.g., Tenda, Vasco, MRV)."
         },
-        "createdAt": {
+        "localizacao": {
           "type": "string",
-          "description": "The date and time when the builder was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The date and time when the builder was last updated.",
-          "format": "date-time"
+          "description": "Location of the property."
         }
       },
       "required": [
         "id",
         "name",
-        "createdAt",
-        "updatedAt"
+        "construtora",
+        "localizacao"
       ]
     },
     "Sale": {
@@ -107,188 +100,102 @@
       "type": "object",
       "description": "Represents a sale record in the CRM.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the sale."
-        },
-        "saleDate": {
-          "type": "string",
-          "description": "Date of the sale.",
-          "format": "date-time"
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to Client. (Relationship: Client 1:N Sale)"
-        },
-        "propertyId": {
-          "type": "string",
-          "description": "Reference to Property. (Relationship: Property 1:N Sale)"
-        },
-        "downPayment": {
-          "type": "number",
-          "description": "Down payment amount for the sale."
-        },
-        "status": {
-          "type": "string",
-          "description": "Current status of the sale (e.g., New Registration, Credit Analysis)."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Additional notes or observations about the sale."
-        },
-        "salesAgentId": {
-          "type": "string",
-          "description": "Reference to SalesAgent. (Relationship: SalesAgent 1:N Sale)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The date and time when the sale was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The date and time when the sale was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "saleDate": { "type": "string", "format": "date-time" },
+        "corretorId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "developmentId": { "type": "string" },
+        "construtora": { "type": "string" },
+        "saleValue": { "type": "number" },
+        "atoValue": { "type": "number" },
+        "commissionPercentage": { "type": ["number", "null"] },
+        "commission": { "type": "number" },
+        "status": { "type": "string", "enum": ["Proposta / Cadastro", "Análise de Crédito / SPC", "Aguardando Assinatura", "Aguardando Pagamento Ato", "Venda Concluída / Paga", "Venda Cancelada / Caiu"] },
+        "commissionStatus": { "type": "string", "enum": ["Pendente", "Pago"] },
+        "observations": { "type": "string" },
+        "combinado": { "type": "string" },
+        "combinadoDate": { "type": ["string", "null"], "format": "date-time" },
+        "clientName": { "type": "string" },
+        "empreendimento": { "type": "string" }
       },
       "required": [
-        "id",
-        "saleDate",
-        "clientId",
-        "propertyId",
-        "downPayment",
-        "status",
-        "salesAgentId",
-        "createdAt",
-        "updatedAt"
+        "id", "saleDate", "corretorId", "clientId", "developmentId", "construtora",
+        "saleValue", "atoValue", "commission", "status", "commissionStatus",
+        "clientName", "empreendimento"
       ]
     },
-    "SalesAgent": {
+    "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SalesAgent",
+      "title": "User",
       "type": "object",
-      "description": "Represents a sales agent or realtor.",
+      "description": "Represents a user of the application.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the sales agent."
+          "description": "Unique identifier for the user (matches auth uid)."
         },
         "name": {
           "type": "string",
-          "description": "Name of the sales agent."
+          "description": "User's full name."
         },
-        "createdAt": {
+        "email": {
           "type": "string",
-          "description": "The date and time when the sales agent was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The date and time when the sales agent was last updated.",
-          "format": "date-time"
+          "format": "email",
+          "description": "User's email address."
         }
       },
-      "required": [
-        "id",
-        "name",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "email"]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/clients/{clientId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "Client",
-          "schema": {
-            "$ref": "#/backend/entities/Client"
-          },
-          "description": "Stores client information.",
-          "params": [
+          "entityName": "User",
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profile information.",
+          "collections": [
             {
-              "name": "clientId",
-              "description": "Unique identifier for the client."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/properties/{propertyId}",
-        "definition": {
-          "entityName": "Property",
-          "schema": {
-            "$ref": "#/backend/entities/Property"
-          },
-          "description": "Stores property details.",
-          "params": [
-            {
-              "name": "propertyId",
-              "description": "Unique identifier for the property."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/builders/{builderId}",
-        "definition": {
-          "entityName": "Builder",
-          "schema": {
-            "$ref": "#/backend/entities/Builder"
-          },
-          "description": "Stores builder information.",
-          "params": [
-            {
-              "name": "builderId",
-              "description": "Unique identifier for the builder."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/salesAgents/{salesAgentId}",
-        "definition": {
-          "entityName": "SalesAgent",
-          "schema": {
-            "$ref": "#/backend/entities/SalesAgent"
-          },
-          "description": "Stores sales agent information.",
-          "params": [
-            {
-              "name": "salesAgentId",
-              "description": "Unique identifier for the sales agent."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/salesAgents/{salesAgentId}/sales/{saleId}",
-        "definition": {
-          "entityName": "Sale",
-          "schema": {
-            "$ref": "#/backend/entities/Sale"
-          },
-          "description": "Stores sales information, creating a hierarchical relationship that simplifies security rules based on sales agent ownership.",
-          "params": [
-            {
-              "name": "salesAgentId",
-              "description": "Unique identifier for the sales agent."
+              "path": "/clients/{clientId}",
+              "definition": {
+                "entityName": "Client",
+                "schema": { "$ref": "#/entities/Client" },
+                "description": "Stores clients for a specific user."
+              }
             },
             {
-              "name": "saleId",
-              "description": "Unique identifier for the sale."
+              "path": "/corretores/{corretorId}",
+              "definition": {
+                "entityName": "Corretor",
+                "schema": { "$ref": "#/entities/Corretor" },
+                "description": "Stores brokers for a specific user."
+              }
+            },
+             {
+              "path": "/developments/{developmentId}",
+              "definition": {
+                "entityName": "Development",
+                "schema": { "$ref": "#/entities/Development" },
+                "description": "Stores developments for a specific user."
+              }
+            },
+            {
+              "path": "/sales/{saleId}",
+              "definition": {
+                "entityName": "Sale",
+                "schema": { "$ref": "#/entities/Sale" },
+                "description": "Stores sales for a specific user."
+              }
             }
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to manage real estate sales data, focusing on clients, properties, builders, sales, and sales agents. The structure prioritizes clear relationships and authorization independence.\n\nThe core principle is to avoid hierarchical authorization dependencies and maintain clarity of intent for debugging. Since there isn't explicit collaborative data, a membership model is not necessary. Instead, a hierarchical path based ownership is used when appropriate. \n\nThe data structure uses path-based ownership for relationships between entities like SalesAgents and Sales. This structure helps to facilitate secure list operations. No custom claims are used; authorization relies on `request.auth.uid` where necessary.\n\n*   `/clients/{clientId}`: Stores client information.\n*   `/properties/{propertyId}`: Stores property details, including a reference to the builder.\n*   `/builders/{builderId}`: Stores builder information.\n*   `/salesAgents/{salesAgentId}`: Stores sales agent information.\n*   `/salesAgents/{salesAgentId}/sales/{saleId}`: Stores sales information, creating a hierarchical relationship that simplifies security rules based on sales agent ownership.\n\nThis structure enables secure 'list' operations by ensuring that each collection's documents share the same security requirements and are appropriately segregated. Authorization independence is achieved by avoiding the need for `get()` calls in the rules; access control can be directly enforced based on the path and `request.auth.uid`."
+    ]
   }
 }
